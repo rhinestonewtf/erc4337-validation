@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import { PackedUserOperation } from "src/lib/ERC4337.sol";
+import { PackedUserOperation, UserOperation } from "src/lib/ERC4337.sol";
 import { IValidator } from "test/utils/IValidator.sol";
 
 contract StorageValidator {
@@ -54,14 +54,8 @@ contract StorageValidator {
         }
     }
 
-    function validateUserOp(
-        PackedUserOperation calldata userOp,
-        bytes32 userOpHash
-    )
-        external
-        returns (uint256)
-    {
-        uint256 mode = uint256(bytes32(userOp.signature[0:32]));
+    function _validateUserOp(bytes calldata signature) internal {
+        uint256 mode = uint256(bytes32(signature[0:32]));
         if (mode == 1) {
             setData(msg.sender, 1);
         } else if (mode == 2) {
@@ -83,6 +77,27 @@ contract StorageValidator {
         } else if (mode == 10) {
             setDataIntoSlot(msg.sender, 10);
         }
+    }
+
+    function validateUserOp(
+        PackedUserOperation calldata userOp,
+        bytes32 userOpHash
+    )
+        external
+        returns (uint256)
+    {
+        _validateUserOp(userOp.signature);
+        return 0;
+    }
+
+    function validateUserOp(
+        UserOperation calldata userOp,
+        bytes32 userOpHash
+    )
+        external
+        returns (uint256)
+    {
+        _validateUserOp(userOp.signature);
         return 0;
     }
 }

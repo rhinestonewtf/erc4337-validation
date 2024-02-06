@@ -2,15 +2,14 @@
 pragma solidity ^0.8.23;
 
 import {
-    PackedUserOperation,
     IEntryPoint,
     IEntryPointSimulations,
     IStakeManager,
-    ENTRYPOINT_ADDR
+    ENTRYPOINT_ADDR,
+    UserOperationDetails
 } from "./lib/ERC4337.sol";
 import { VmSafe } from "forge-std/Vm.sol";
 import { getLabel, getMappingKeyAndParentOf } from "./lib/Vm.sol";
-import "forge-std/console2.sol";
 
 /**
  * @title ERC4337SpecsParser
@@ -59,16 +58,16 @@ library ERC4337SpecsParser {
     /**
      * @dev Parses and validates the ERC-4337 rules
      * @param accesses The state diffs to validate
-     * @param userOp The PackedUserOperation to validate
+     * @param userOpDetails The UserOperationDetails to validate
      */
     function parseValidation(
         VmSafe.AccountAccess[] memory accesses,
-        PackedUserOperation memory userOp
+        UserOperationDetails memory userOpDetails
     )
         internal
     {
         // Get entities for the userOp
-        Entities memory entities = getEntities(userOp);
+        Entities memory entities = getEntities(userOpDetails);
 
         // Validate banned opcodes
         validateBannedOpcodes();
@@ -359,18 +358,18 @@ library ERC4337SpecsParser {
 
     /**
      * @dev Returns the entities of the UserOperation
-     * @param userOp The UserOperation to get the entities of
+     * @param userOpDetails The UserOperationDetails to get the entities of
      * @return entities The entities of the UserOperation
      */
-    function getEntities(PackedUserOperation memory userOp)
+    function getEntities(UserOperationDetails memory userOpDetails)
         internal
         view
         returns (Entities memory entities)
     {
         // Get UserOperation factory
         address factory;
-        if (userOp.initCode.length > 20) {
-            bytes memory initCode = userOp.initCode;
+        if (userOpDetails.initCode.length > 20) {
+            bytes memory initCode = userOpDetails.initCode;
             assembly {
                 factory := mload(add(initCode, 20))
             }
@@ -378,8 +377,8 @@ library ERC4337SpecsParser {
 
         // Get UserOperation paymaster
         address paymaster;
-        if (userOp.paymasterAndData.length > 20) {
-            bytes memory paymasterAndData = userOp.paymasterAndData;
+        if (userOpDetails.paymasterAndData.length > 20) {
+            bytes memory paymasterAndData = userOpDetails.paymasterAndData;
             assembly {
                 paymaster := mload(add(paymasterAndData, 20))
             }
@@ -390,7 +389,7 @@ library ERC4337SpecsParser {
         address aggregator;
 
         entities = Entities({
-            account: userOp.sender,
+            account: userOpDetails.sender,
             factory: factory,
             isFactoryStaked: isStaked(factory),
             paymaster: paymaster,

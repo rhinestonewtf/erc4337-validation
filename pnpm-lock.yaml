@@ -14,8 +14,11 @@ dependencies:
 
 devDependencies:
   account-abstraction:
-    specifier: github:kopy-kat/account-abstraction#develop
-    version: github.com/kopy-kat/account-abstraction/9458a1941a9a76c4e3e47683a24789e2f6fc4789(ethers@5.7.2)(hardhat@2.19.5)(lodash@4.17.21)(typechain@5.2.0)
+    specifier: github:eth-infinitism/account-abstraction#develop
+    version: github.com/eth-infinitism/account-abstraction/32b6d96b00ebe8c9411d27658733467dc634e63c(ethers@5.7.2)(hardhat@2.19.5)(lodash@4.17.21)(typechain@5.2.0)
+  account-abstraction-v0.6:
+    specifier: github:eth-infinitism/account-abstraction#v0.6.0
+    version: github.com/eth-infinitism/account-abstraction/7174d6d845618dbd11cee68eefa715f5263690b6(ethers@5.7.2)(hardhat@2.19.5)(lodash@4.17.21)(typechain@5.2.0)
   ds-test:
     specifier: github:dapphub/ds-test
     version: github.com/dapphub/ds-test/e282159d5170298eb2455a6c05280ab5a73a4ef0
@@ -419,6 +422,14 @@ packages:
     engines: {node: '>=14'}
     dev: true
 
+  /@gnosis.pm/safe-contracts@1.3.0(ethers@5.7.2):
+    resolution: {integrity: sha512-1p+1HwGvxGUVzVkFjNzglwHrLNA67U/axP0Ct85FzzH8yhGJb4t9jDjPYocVMzLorDoWAfKicGy1akPY9jXRVw==}
+    peerDependencies:
+      ethers: ^5.1.4
+    dependencies:
+      ethers: 5.7.2
+    dev: true
+
   /@metamask/eth-sig-util@4.0.1:
     resolution: {integrity: sha512-tghyZKLHZjcdlDqCA3gNZmLeR0XvOE9U1qoQO9ohyAZT6Pya+H9vkBPcsyXytmYLNgVoin7CKCmweo/R43V+tQ==}
     engines: {node: '>=12.0.0'}
@@ -751,6 +762,10 @@ packages:
     transitivePeerDependencies:
       - encoding
       - supports-color
+    dev: true
+
+  /@openzeppelin/contracts@4.9.5:
+    resolution: {integrity: sha512-ZK+W5mVhRppff9BE6YdR8CC52C8zAvsVAiWhEtQ5+oNxFE6h1WdeWo+FJSF8KKvtxxVYZ7MTP/5KoVpAU3aSWg==}
     dev: true
 
   /@openzeppelin/contracts@5.0.1:
@@ -3319,7 +3334,7 @@ packages:
     resolution: {integrity: sha512-uWjbaKIK3T1OSVptzX7Nl6PvQ3qAGtKEtVRjRuazjfL3Bx5eI409VZSqgND+4UNnmzLVdPj9FqFJNPqBZFve4w==}
     hasBin: true
     dependencies:
-      glob: 7.2.3
+      glob: 7.2.0
     dev: true
 
   /ripemd160@2.0.2:
@@ -4001,15 +4016,9 @@ packages:
     version: 1.0.0
     dev: true
 
-  github.com/foundry-rs/forge-std/4513bc2063f23c57bee6558799584b518d387a39:
-    resolution: {tarball: https://codeload.github.com/foundry-rs/forge-std/tar.gz/4513bc2063f23c57bee6558799584b518d387a39}
-    name: forge-std
-    version: 1.7.6
-    dev: true
-
-  github.com/kopy-kat/account-abstraction/9458a1941a9a76c4e3e47683a24789e2f6fc4789(ethers@5.7.2)(hardhat@2.19.5)(lodash@4.17.21)(typechain@5.2.0):
-    resolution: {tarball: https://codeload.github.com/kopy-kat/account-abstraction/tar.gz/9458a1941a9a76c4e3e47683a24789e2f6fc4789}
-    id: github.com/kopy-kat/account-abstraction/9458a1941a9a76c4e3e47683a24789e2f6fc4789
+  github.com/eth-infinitism/account-abstraction/32b6d96b00ebe8c9411d27658733467dc634e63c(ethers@5.7.2)(hardhat@2.19.5)(lodash@4.17.21)(typechain@5.2.0):
+    resolution: {tarball: https://codeload.github.com/eth-infinitism/account-abstraction/tar.gz/32b6d96b00ebe8c9411d27658733467dc634e63c}
+    id: github.com/eth-infinitism/account-abstraction/32b6d96b00ebe8c9411d27658733467dc634e63c
     name: accountabstraction
     version: 0.6.0
     dependencies:
@@ -4035,6 +4044,43 @@ packages:
       - supports-color
       - typechain
       - utf-8-validate
+    dev: true
+
+  github.com/eth-infinitism/account-abstraction/7174d6d845618dbd11cee68eefa715f5263690b6(ethers@5.7.2)(hardhat@2.19.5)(lodash@4.17.21)(typechain@5.2.0):
+    resolution: {tarball: https://codeload.github.com/eth-infinitism/account-abstraction/tar.gz/7174d6d845618dbd11cee68eefa715f5263690b6}
+    id: github.com/eth-infinitism/account-abstraction/7174d6d845618dbd11cee68eefa715f5263690b6
+    name: accountabstraction
+    version: 0.6.0
+    dependencies:
+      '@gnosis.pm/safe-contracts': 1.3.0(ethers@5.7.2)
+      '@nomiclabs/hardhat-etherscan': 2.1.8(hardhat@2.19.5)
+      '@openzeppelin/contracts': 4.9.5
+      '@thehubbleproject/bls': 0.5.1
+      '@typechain/hardhat': 2.3.1(hardhat@2.19.5)(lodash@4.17.21)(typechain@5.2.0)
+      '@types/mocha': 9.1.1
+      ethereumjs-util: 7.1.5
+      ethereumjs-wallet: 1.0.2
+      hardhat-deploy: 0.11.45
+      hardhat-deploy-ethers: 0.3.0-beta.13(ethers@5.7.2)(hardhat@2.19.5)
+      solidity-coverage: 0.8.6(hardhat@2.19.5)
+      source-map-support: 0.5.21
+      table: 6.8.1
+      typescript: 4.9.5
+    transitivePeerDependencies:
+      - bufferutil
+      - encoding
+      - ethers
+      - hardhat
+      - lodash
+      - supports-color
+      - typechain
+      - utf-8-validate
+    dev: true
+
+  github.com/foundry-rs/forge-std/4513bc2063f23c57bee6558799584b518d387a39:
+    resolution: {tarball: https://codeload.github.com/foundry-rs/forge-std/tar.gz/4513bc2063f23c57bee6558799584b518d387a39}
+    name: forge-std
+    version: 1.7.6
     dev: true
 
   github.com/vectorized/solady/880ab6de8b4ee2ae51517bfd417a79e917675bb2:

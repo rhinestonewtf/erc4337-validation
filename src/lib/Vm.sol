@@ -40,3 +40,7 @@ function stopMappingRecording() {
 function getMappingKeyAndParentOf(address target, bytes32 slot) returns (bool, bytes32, bytes32) {
     return Vm(VM_ADDR).getMappingKeyAndParentOf(target, slot);
 }
+
+function expectRevert() {
+    Vm(VM_ADDR).expectRevert();
+}

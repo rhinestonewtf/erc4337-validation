@@ -5,7 +5,10 @@ import "forge-std/Test.sol";
 import { MockAccount } from "./MockAccount.sol";
 import { MockFactory } from "./MockFactory.sol";
 import {
-    PackedUserOperation, ENTRYPOINT_ADDR, IEntryPoint, etchEntrypoint
+    UserOperation,
+    ENTRYPOINT_ADDR,
+    IEntryPointV060,
+    etchEntrypointV060
 } from "src/lib/ERC4337.sol";
 import { Simulator } from "src/Simulator.sol";
 
@@ -13,11 +16,11 @@ contract TestBaseUtil is Test {
     // singletons
     MockAccount implementation;
     MockFactory factory;
-    IEntryPoint entrypoint = IEntryPoint(ENTRYPOINT_ADDR);
+    IEntryPointV060 entrypoint = IEntryPointV060(ENTRYPOINT_ADDR);
 
     function setUp() public virtual {
         // Set up EntryPoint
-        etchEntrypoint();
+        etchEntrypointV060();
 
         // Set up Account and Factory
         implementation = new MockAccount();
@@ -40,15 +43,17 @@ contract TestBaseUtil is Test {
         vm.deal(account, 1 ether);
     }
 
-    function getDefaultUserOp() internal returns (PackedUserOperation memory userOp) {
-        userOp = PackedUserOperation({
+    function getDefaultUserOp() internal returns (UserOperation memory userOp) {
+        userOp = UserOperation({
             sender: address(0),
             nonce: 0,
             initCode: "",
             callData: "",
-            accountGasLimits: bytes32(abi.encodePacked(uint128(2e6), uint128(2e6))),
+            callGasLimit: 2e6,
+            verificationGasLimit: 2e6,
             preVerificationGas: 2e6,
-            gasFees: bytes32(abi.encodePacked(uint128(1), uint128(1))),
+            maxFeePerGas: 1,
+            maxPriorityFeePerGas: 1,
             paymasterAndData: bytes(""),
             signature: ""
         });
@@ -59,7 +64,7 @@ contract TestBaseUtil is Test {
         bytes memory signature
     )
         internal
-        returns (PackedUserOperation memory userOp)
+        returns (UserOperation memory userOp)
     {
         userOp = getDefaultUserOp();
         (address account, bytes memory initCode) = getAccountAndInitCode(keccak256("account1"));
@@ -69,13 +74,13 @@ contract TestBaseUtil is Test {
         userOp.signature = abi.encode(validator, signature);
     }
 
-    function simulateUserOp(PackedUserOperation memory userOp) internal {
+    function simulateUserOp(UserOperation memory userOp) internal {
         // Simulate userOperation
         Simulator.simulateUserOp(userOp, ENTRYPOINT_ADDR);
     }
 
     function simulateUserOp(address validator, bytes memory signature) internal {
-        PackedUserOperation memory userOp = getFormattedUserOp(validator, signature);
+        UserOperation memory userOp = getFormattedUserOp(validator, signature);
         // Simulate userOperation
         Simulator.simulateUserOp(userOp, ENTRYPOINT_ADDR);
     }

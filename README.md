@@ -10,6 +10,8 @@ This library allows you to validate:
 - [x] Disallowed use of `EXT*` opcodes
 - [x] Disallowed use `CREATE` opcode
 
+It also supports both `v0.6` and `v0.7` of ERC-4337.
+
 > This library is in active development and is subject to breaking changes. If you spot a bug, please take out an issue and we will fix it as soon as we can.
 
 ## Installation
@@ -34,7 +36,7 @@ To use this library, simply import the `Simulator` and call
 Simulator.simulateUserOp(userOp, entryPointAddress);
 ```
 
-Note that the `entryPointAddress` needs to be the address of the `EntryPointSimulations` contract. For an example see the [Simulator test](./test/Simulator.t.sol) and the [TestBase](./test/utils/TestBaseUtil.sol).
+Note that the `entryPointAddress` needs to be the address of the `EntryPointSimulations` contract if you are using v0.7 of ERC-4337. For an example see the [Simulator test](./test/Simulator.t.sol), the [Simulator test v0.6](./test/SimulatorV060.t.sol) and the relevant [test bases](./test/utils).
 
 ## Contributing
 
