@@ -1,14 +1,14 @@
 {
-  "name": "@rhinestone/modulekit",
-  "description": "ModuleKit is a development toolkit to build Smart Account Modules",
+  "name": "erc4337-validation",
+  "description": "A library to validate the ERC-4337 rules within Foundry",
   "license": "MIT",
-  "version": "0.3.1",
+  "version": "0.0.1",
   "author": {
-    "name": "zeroknots.eth",
+    "name": "kopy-kat",
     "url": "https://rhinestone.wtf"
   },
   "bugs": {
-    "url": "https://github.com/rhinestonewtf/modulekit/issues"
+    "url": "https://github.com/rhinestonewtf/erc4337-validation/issues"
   },
   "dependencies": {
     "@openzeppelin/contracts": "5.0.1",
@@ -22,25 +22,18 @@
     "solhint": "^4.1.1"
   },
   "files": [
-    "artifacts",
     "src",
-    "test/utils",
-    "CHANGELOG.md",
-    "LICENSE-GPL.md"
+    "test",
+    "CHANGELOG.md"
   ],
-  "homepage": "https://github.com/rhinestonewtf/modulekit/#readme",
   "keywords": [
-    "blockchain",
-    "ethereum",
     "foundry",
-    "smart-contracts",
-    "solidity",
-    "web3"
+    "erc-4337"
   ],
   "publishConfig": {
     "access": "public"
   },
-  "repository": "github.com/rhinestonewtf/modulekit",
+  "repository": "github.com/rhinestonewtf/erc4337-validation",
   "scripts": {
     "build": "forge build",
     "build:optimized": "FOUNDRY_PROFILE=optimized forge build",
