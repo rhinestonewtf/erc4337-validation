@@ -36,6 +36,8 @@ To use this library, simply import the `Simulator` and call
 Simulator.simulateUserOp(userOp, entryPointAddress);
 ```
 
+If the userOp breaks any of the rules, the function will revert with a message indicating which rule was broken.
+
 Note that the `entryPointAddress` needs to be the address of the `EntryPointSimulations` contract if you are using v0.7 of ERC-4337. For an example see the [Simulator test](./test/Simulator.t.sol), the [Simulator test v0.6](./test/SimulatorV060.t.sol) and the relevant [test bases](./test/utils).
 
 ## Contributing
