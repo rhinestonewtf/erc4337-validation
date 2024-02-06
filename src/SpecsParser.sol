@@ -279,17 +279,7 @@ library ERC4337SpecsParser {
         returns (bool isAssociated)
     {
         // Check if the current slot is associated with an entity
-        if (
-            currentSlot == bytes32(uint256(uint160(entities.account)))
-                || (
-                    currentSlot == bytes32(uint256(uint160(entities.factory)))
-                        && entities.isFactoryStaked
-                )
-                || (
-                    currentSlot == bytes32(uint256(uint160(entities.paymaster)))
-                        && entities.isPaymasterStaked
-                )
-        ) {
+        if (slotMatchesEntity(currentSlot, entities)) {
             isAssociated = true;
         } else {
             // Get the parent of the current slot if it is a mapping
@@ -297,22 +287,37 @@ library ERC4337SpecsParser {
 
             // If the parent was found, check if it is associated with an entity
             if (found) {
-                if (
-                    key == bytes32(uint256(uint160(entities.account)))
-                        || (
-                            key == bytes32(uint256(uint160(entities.factory)))
-                                && entities.isFactoryStaked
-                        )
-                        || (
-                            key == bytes32(uint256(uint160(entities.paymaster)))
-                                && entities.isPaymasterStaked
-                        )
-                ) {
+                if (slotMatchesEntity(key, entities)) {
                     isAssociated = true;
                 }
             }
         }
         // todo: [STO-033] Read-only access to any storage in non-entity contract.
+    }
+
+    /**
+     * @dev Returns whether the current storage slot matches an entity
+     * @param slot The current storage slot
+     * @param entities The entities of the UserOperation
+     * @return _ Whether the current storage slot matches an entity
+     */
+    function slotMatchesEntity(
+        bytes32 slot,
+        Entities memory entities
+    )
+        internal
+        pure
+        returns (bool)
+    {
+        // Make sure that the slot is not empty and thus matches with an unset entity
+        if (slot == bytes32(0)) {
+            return false;
+        }
+
+        // Check if the slot matches an entity and the entity is staked (if applicable)
+        return slot == bytes32(uint256(uint160(entities.account)))
+            || (slot == bytes32(uint256(uint160(entities.factory))) && entities.isFactoryStaked)
+            || (slot == bytes32(uint256(uint160(entities.paymaster))) && entities.isPaymasterStaked);
     }
 
     /**
