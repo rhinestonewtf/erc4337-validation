@@ -8,6 +8,9 @@ dependencies:
   '@openzeppelin/contracts':
     specifier: 5.0.1
     version: 5.0.1
+  solady:
+    specifier: github:vectorized/solady
+    version: github.com/vectorized/solady/880ab6de8b4ee2ae51517bfd417a79e917675bb2
 
 devDependencies:
   account-abstraction:
@@ -3316,7 +3319,7 @@ packages:
     resolution: {integrity: sha512-uWjbaKIK3T1OSVptzX7Nl6PvQ3qAGtKEtVRjRuazjfL3Bx5eI409VZSqgND+4UNnmzLVdPj9FqFJNPqBZFve4w==}
     hasBin: true
     dependencies:
-      glob: 7.2.0
+      glob: 7.2.3
     dev: true
 
   /ripemd160@2.0.2:
@@ -4033,3 +4036,9 @@ packages:
       - typechain
       - utf-8-validate
     dev: true
+
+  github.com/vectorized/solady/880ab6de8b4ee2ae51517bfd417a79e917675bb2:
+    resolution: {tarball: https://codeload.github.com/vectorized/solady/tar.gz/880ab6de8b4ee2ae51517bfd417a79e917675bb2}
+    name: solady
+    version: 0.0.167
+    dev: false

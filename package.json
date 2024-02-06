@@ -11,7 +11,8 @@
     "url": "https://github.com/rhinestonewtf/modulekit/issues"
   },
   "dependencies": {
-    "@openzeppelin/contracts": "5.0.1"
+    "@openzeppelin/contracts": "5.0.1",
+    "solady": "github:vectorized/solady"
   },
   "devDependencies": {
     "account-abstraction": "github:kopy-kat/account-abstraction#develop",

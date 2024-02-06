@@ -4,5 +4,39 @@ import { IEntryPoint } from "account-abstraction/interfaces/IEntryPoint.sol";
 import { IEntryPointSimulations } from "account-abstraction/interfaces/IEntryPointSimulations.sol";
 import { ValidationData, _packValidationData } from "account-abstraction/core/Helpers.sol";
 import { IStakeManager } from "account-abstraction/interfaces/IStakeManager.sol";
+import { EntryPointSimulations } from "account-abstraction/core/EntryPointSimulations.sol";
+import { SenderCreator } from "account-abstraction/core/EntryPoint.sol";
+import { etch } from "./Vm.sol";
 
 address constant ENTRYPOINT_ADDR = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
+
+contract EntryPointSimulationsPatch is EntryPointSimulations {
+    address _entrypointAddr = address(this);
+
+    SenderCreator _newSenderCreator;
+
+    function init(address entrypointAddr) public {
+        _entrypointAddr = entrypointAddr;
+        initSenderCreator();
+    }
+
+    function initSenderCreator() internal override {
+        //this is the address of the first contract created with CREATE by this address.
+        address createdObj = address(
+            uint160(uint256(keccak256(abi.encodePacked(hex"d694", _entrypointAddr, hex"01"))))
+        );
+        _newSenderCreator = SenderCreator(createdObj);
+    }
+
+    function senderCreator() internal view virtual override returns (SenderCreator) {
+        return _newSenderCreator;
+    }
+}
+
+function etchEntrypoint() returns (IEntryPoint) {
+    address payable entryPoint = payable(address(new EntryPointSimulationsPatch()));
+    etch(ENTRYPOINT_ADDR, entryPoint.code);
+    EntryPointSimulationsPatch(payable(ENTRYPOINT_ADDR)).init(entryPoint);
+
+    return IEntryPoint(ENTRYPOINT_ADDR);
+}

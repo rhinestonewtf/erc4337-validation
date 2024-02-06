@@ -20,9 +20,9 @@ import {
 import { ERC4337SpecsParser } from "./SpecsParser.sol";
 
 library Simulator {
-    function simulateUserOp(PackedUserOperation memory userOp, IEntryPoint onEntryPoint) internal {
+    function simulateUserOp(PackedUserOperation memory userOp, address onEntryPoint) internal {
         uint256 snapShotId = snapshot();
-        IEntryPointSimulations simulationEntryPoint = IEntryPointSimulations(address(onEntryPoint));
+        IEntryPointSimulations simulationEntryPoint = IEntryPointSimulations(onEntryPoint);
         startMappingRecording();
         startStateDiffRecording();
         IEntryPointSimulations.ValidationResult memory result =
