@@ -35,9 +35,9 @@ function etchEntrypoint() returns (IEntryPoint) {
 
     // Create and etch a new SenderCreator
     SenderCreator senderCreator = new SenderCreator();
-    address createdObj =
+    address senderCreatorAddr =
         address(uint160(uint256(keccak256(abi.encodePacked(hex"d694", ENTRYPOINT_ADDR, hex"01")))));
-    etch(createdObj, address(senderCreator).code);
+    etch(senderCreatorAddr, address(senderCreator).code);
 
     return IEntryPoint(ENTRYPOINT_ADDR);
 }

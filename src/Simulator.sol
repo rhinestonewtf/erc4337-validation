@@ -44,7 +44,10 @@ library Simulator {
 
         // Ensure that the signature was valid
         if (result.returnInfo.accountValidationData != 0) {
-            revert("Simulation error: signature failed");
+            bool sigFailed = (result.returnInfo.accountValidationData & 1) == 1;
+            if (sigFailed) {
+                revert("Simulation error: signature failed");
+            }
         }
 
         // Create a UserOperationDetails struct
