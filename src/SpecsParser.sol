@@ -95,7 +95,8 @@ library ERC4337SpecsParser {
 
     /**
      * @dev Validates that no banned opcodes are used
-     * @notice This function is not implemented yet
+     * @notice This function is not implemented yet, it depends on
+     * https://github.com/foundry-rs/foundry/issues/6704
      */
     function validateBannedOpcodes() internal pure {
         // todo
