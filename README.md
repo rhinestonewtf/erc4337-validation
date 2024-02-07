@@ -48,7 +48,7 @@ For guidance on how to create PRs, see the [CONTRIBUTING](./CONTRIBUTING.md) gui
 
 ## Credits
 
-- [Dror](https://github.com/drortirosh): For the implementation approach and an intial prototype
+- [Dror](https://github.com/drortirosh): For the implementation approach and an initial prototype
 
 ## Authors ✨
 
