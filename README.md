@@ -25,7 +25,7 @@ forge install rhinestonewtf/erc4337-validation
 ### Using a package manager
 
 ```bash
-pnpm i rhinestonewtf/erc4337-validation
+pnpm i @rhinestone/erc4337-validation
 ```
 
 ## Usage
