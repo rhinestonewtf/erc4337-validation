@@ -25,7 +25,10 @@
   "files": [
     "src",
     "test",
-    "CHANGELOG.md"
+    "CHANGELOG.md",
+    "package.json",
+    "foundry.toml",
+    "remappings.txt"
   ],
   "keywords": [
     "foundry",
