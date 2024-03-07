@@ -344,7 +344,7 @@ library ERC4337SpecsParser {
         } else {
             // If the parent was not found, loop over the previous 128 slots to find it
             // This covers mappings using structs up to an offset of 128
-            for (uint256 k = 1; k <= 128; k++) {
+            for (uint256 k = 1; k <= 128 && k <= uint256(currentSlot); k++) {
                 (_found, _key,) = getMappingKeyAndParentOf(
                     currentAccessAccount, bytes32(uint256(currentSlot) - k)
                 );
