@@ -5,7 +5,6 @@ import {
     IEntryPoint,
     IEntryPointSimulations,
     IStakeManager,
-    ENTRYPOINT_ADDR,
     UserOperationDetails
 } from "./lib/ERC4337.sol";
 import { VmSafe } from "forge-std/Vm.sol";
@@ -82,7 +81,7 @@ library ERC4337SpecsParser {
                 validateBannedStorageLocations(currentAccess, entities);
 
                 // Validate disallowed *CALLs
-                validateDisallowedCalls(currentAccess, entities);
+                validateDisallowedCalls(currentAccess, entities, userOpDetails.entryPoint);
 
                 // Validate disallowed EXT* opcodes
                 validateDisallowedExtOpCodes(currentAccess, entities);
@@ -152,7 +151,8 @@ library ERC4337SpecsParser {
      */
     function validateDisallowedCalls(
         VmSafe.AccountAccess memory currentAccess,
-        Entities memory entities
+        Entities memory entities,
+        address entryPoint
     )
         internal
         view
@@ -176,7 +176,7 @@ library ERC4337SpecsParser {
 
             bool callerIsAccount = currentAccess.accessor == entities.account;
             bool callerIsFactory = currentAccess.accessor == entities.factory;
-            bool calleeIsEntryPoint = currentAccess.account == ENTRYPOINT_ADDR;
+            bool calleeIsEntryPoint = currentAccess.account == entryPoint;
 
             // Check that value is only used from account or factory to EntryPoint
             // Revert otherwise
@@ -187,7 +187,7 @@ library ERC4337SpecsParser {
             }
 
             // Allow self calls from EntryPoint
-            if (calleeIsEntryPoint && currentAccess.accessor != ENTRYPOINT_ADDR) {
+            if (calleeIsEntryPoint && currentAccess.accessor != entryPoint) {
                 // Allow only depositTo from factory/account or fallback from account
                 // Revert otherwise
                 if (
@@ -392,11 +392,11 @@ library ERC4337SpecsParser {
         entities = Entities({
             account: userOpDetails.sender,
             factory: factory,
-            isFactoryStaked: isStaked(factory),
+            isFactoryStaked: isStaked(factory, userOpDetails.entryPoint),
             paymaster: paymaster,
-            isPaymasterStaked: isStaked(paymaster),
+            isPaymasterStaked: isStaked(paymaster, userOpDetails.entryPoint),
             aggregator: aggregator,
-            isAggregatorStaked: isStaked(aggregator)
+            isAggregatorStaked: isStaked(aggregator, userOpDetails.entryPoint)
         });
     }
 
@@ -430,10 +430,16 @@ library ERC4337SpecsParser {
      * @param entity The entity to check
      * @return isEntityStaked Whether the entity is staked
      */
-    function isStaked(address entity) internal view returns (bool isEntityStaked) {
+    function isStaked(
+        address entity,
+        address entryPoint
+    )
+        internal
+        view
+        returns (bool isEntityStaked)
+    {
         // Get the deposit info for the entity
-        IStakeManager.DepositInfo memory deposit =
-            IStakeManager(ENTRYPOINT_ADDR).getDepositInfo(entity);
+        IStakeManager.DepositInfo memory deposit = IStakeManager(entryPoint).getDepositInfo(entity);
 
         // Return whether the entity is staked
         isEntityStaked =

@@ -16,6 +16,7 @@ import { IEntryPoint as IEntryPointSimulationsV060 } from
 import { IEntryPoint as IEntryPointV060 } from "account-abstraction-v0.6/interfaces/IEntryPoint.sol";
 
 struct UserOperationDetails {
+    address entryPoint;
     address sender;
     bytes initCode;
     bytes paymasterAndData;
@@ -23,7 +24,8 @@ struct UserOperationDetails {
 
 import { etch } from "./Vm.sol";
 
-address constant ENTRYPOINT_ADDR = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
+address constant ENTRYPOINT_ADDR = 0x0000000071727De22E5E9d8BAf0edAc6f37da032;
+address constant ENTRYPOINT_ADDR_V060 = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
 
 /**
  * Creates a new EntryPointSimulations and etches it to the ENTRYPOINT_ADDR
@@ -48,15 +50,16 @@ function etchEntrypoint() returns (IEntryPoint) {
  */
 function etchEntrypointV060() returns (IEntryPoint) {
     // Etch the v0.6 bytecode to the ENTRYPOINT_ADDR
-    etch(ENTRYPOINT_ADDR, ENTRYPOINT_V060_BYTECODE);
+    etch(ENTRYPOINT_ADDR_V060, ENTRYPOINT_V060_BYTECODE);
 
     // Create and etch a new SenderCreator
     SenderCreator senderCreator = new SenderCreator();
-    address createdObj =
-        address(uint160(uint256(keccak256(abi.encodePacked(hex"d694", ENTRYPOINT_ADDR, hex"01")))));
+    address createdObj = address(
+        uint160(uint256(keccak256(abi.encodePacked(hex"d694", ENTRYPOINT_ADDR_V060, hex"01"))))
+    );
     etch(createdObj, address(senderCreator).code);
 
-    return IEntryPoint(ENTRYPOINT_ADDR);
+    return IEntryPoint(ENTRYPOINT_ADDR_V060);
 }
 
 bytes constant ENTRYPOINT_V060_BYTECODE =

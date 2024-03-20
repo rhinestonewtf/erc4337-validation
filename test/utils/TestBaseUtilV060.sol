@@ -6,7 +6,7 @@ import { MockAccount } from "./MockAccount.sol";
 import { MockFactory } from "./MockFactory.sol";
 import {
     UserOperation,
-    ENTRYPOINT_ADDR,
+    ENTRYPOINT_ADDR_V060 as ENTRYPOINT_ADDR,
     IEntryPointV060,
     etchEntrypointV060
 } from "src/lib/ERC4337.sol";
