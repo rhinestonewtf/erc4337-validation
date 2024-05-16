@@ -44,8 +44,6 @@ Note that the `entryPointAddress` needs to be the address of the `EntryPointSimu
 
 For feature or change requests, feel free to open a PR, start a discussion or get in touch with us.
 
-For guidance on how to create PRs, see the [CONTRIBUTING](./CONTRIBUTING.md) guide.
-
 ## Credits
 
 - [Dror](https://github.com/drortirosh): For the implementation approach and an initial prototype
