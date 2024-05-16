@@ -37,7 +37,10 @@
   "publishConfig": {
     "access": "public"
   },
-  "repository": "github.com/rhinestonewtf/erc4337-validation",
+  "repository": {
+    "type": "git",
+    "url": "github.com/rhinestonewtf/erc4337-validation"
+  },
   "scripts": {
     "build": "forge build",
     "build:optimized": "FOUNDRY_PROFILE=optimized forge build",
