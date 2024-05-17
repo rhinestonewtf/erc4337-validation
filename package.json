@@ -12,9 +12,7 @@
   },
   "dependencies": {
     "@openzeppelin/contracts": "5.0.1",
-    "solady": "github:vectorized/solady"
-  },
-  "devDependencies": {
+    "solady": "github:vectorized/solady",
     "account-abstraction": "github:eth-infinitism/account-abstraction#develop",
     "account-abstraction-v0.6": "github:eth-infinitism/account-abstraction#v0.6.0",
     "ds-test": "github:dapphub/ds-test",
