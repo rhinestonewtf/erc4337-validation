@@ -1,7 +1,7 @@
 [profile.default]
 src = "src"
 out = "out"
-libs = ["lib"]
+libs = ["node_modules"]
 
 [fmt]
 bracket_spacing = true
