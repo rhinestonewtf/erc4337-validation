@@ -43,7 +43,7 @@
   "homepage": "https://github.com/rhinestonewtf/erc4337-validation#readme",
   "repository": {
     "type": "git",
-    "url": "https://github.com/rhinestonewtf/erc4337-validation.git"
+    "url": "git+https://github.com/rhinestonewtf/erc4337-validation.git"
   },
   "bugs": {
     "url": "https://github.com/rhinestonewtf/erc4337-validation/issues"
