@@ -1,12 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
+<<<<<<< avoid-memory-limit-oog
+import { IStakeManager, ENTRYPOINT_ADDR, UserOperationDetails } from "./lib/ERC4337.sol";
+=======
 import {
     IEntryPoint,
     IEntryPointSimulations,
     IStakeManager,
     UserOperationDetails
 } from "./lib/ERC4337.sol";
+>>>>>>> main
 import { VmSafe } from "forge-std/Vm.sol";
 import { getLabel, getMappingKeyAndParentOf } from "./lib/Vm.sol";
 

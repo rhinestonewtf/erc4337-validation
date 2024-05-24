@@ -78,20 +78,14 @@ library Simulator {
         // Simulate the UserOperation and handle revert
         try IEntryPointSimulationsV060(onEntryPoint).simulateValidation(userOp) { }
         catch (bytes memory reason) {
-            bytes memory _reason;
+            uint256 sigFailed;
+            // selector (4 bytes) + length(32 bytes) + preOpGas(32 bytes)
+            // + prefund (32 bytes) + sigFailed (32 bytes)
+            uint256 pos = 4 + 32 + 32 + 32;
             assembly {
-                _reason := add(4, reason)
+                sigFailed := mload(add(reason, pos))
             }
-            (IEntryPointSimulationsV060.ReturnInfo memory returnInfo,,,) = abi.decode(
-                _reason,
-                (
-                    IEntryPointSimulationsV060.ReturnInfo,
-                    IStakeManager.StakeInfo,
-                    IStakeManager.StakeInfo,
-                    IStakeManager.StakeInfo
-                )
-            );
-            if (returnInfo.sigFailed) {
+            if (sigFailed == 1) {
                 revert("Simulation error: signature failed");
             }
         }
