@@ -54,6 +54,7 @@ library Simulator {
         // This is to make it easier to maintain compatibility of the differnt UserOperation
         // versions
         UserOperationDetails memory userOpDetails = UserOperationDetails({
+            entryPoint: onEntryPoint,
             sender: userOp.sender,
             initCode: userOp.initCode,
             paymasterAndData: userOp.paymasterAndData
@@ -93,6 +94,7 @@ library Simulator {
         // This is to make it easier to maintain compatibility of the differnt UserOperation
         // versions
         UserOperationDetails memory userOpDetails = UserOperationDetails({
+            entryPoint: onEntryPoint,
             sender: userOp.sender,
             initCode: userOp.initCode,
             paymasterAndData: userOp.paymasterAndData
