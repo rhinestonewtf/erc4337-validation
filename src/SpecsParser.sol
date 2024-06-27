@@ -196,7 +196,7 @@ library ERC4337SpecsParser {
                             (
                                 (callerIsAccount || callerIsFactory)
                                     && currentAccess.data.length > 4
-                                    && bytes4(currentAccess.data) != bytes4(0xb760faf9)
+                                    && bytes4(currentAccess.data) == bytes4(0xb760faf9)
                             ) || (callerIsAccount && currentAccess.data.length == 0)
                         )
                     )
