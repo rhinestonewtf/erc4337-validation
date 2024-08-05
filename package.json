@@ -22,7 +22,10 @@
     "prettier:write": "prettier --write \"**/*.{json,md,svg,yml}\"",
     "test": "forge test",
     "test:lite": "FOUNDRY_PROFILE=lite forge test",
-    "test:optimized": "pnpm run build:optimized && FOUNDRY_PROFILE=test-optimized forge test"
+    "test:optimized": "pnpm run build:optimized && FOUNDRY_PROFILE=test-optimized forge test",
+    "changeset": "changeset",
+    "changeset:release": "pnpm build && changeset publish",
+    "changeset:version": "changeset version && pnpm install --lockfile-only"
   },
   "dependencies": {
     "@openzeppelin/contracts": "5.0.1",
@@ -31,8 +34,11 @@
     "account-abstraction-v0.6": "github:eth-infinitism/account-abstraction#v0.6.0",
     "ds-test": "github:dapphub/ds-test",
     "forge-std": "github:foundry-rs/forge-std",
-    "prettier": "^2.8.8",
-    "solhint": "^4.1.1"
+    "prettier": "^2.8.8"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.27.2",
+    "solhint": "^5.0.1"
   },
   "files": [
     "src",
