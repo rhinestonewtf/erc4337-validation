@@ -36,9 +36,9 @@ library ERC4337SpecsParser {
     error InvalidOpcode(address contractAddress, string opcode);
 
     /**
-     * @dev Entity struct
-     * @dev Entities can be factory, paymaster, aggregator and account, if included in the
+     * Entity struct
      * UserOperation
+     * @dev Entities can be factory, paymaster, aggregator and account, if included in the
      */
     struct Entities {
         // Account
@@ -55,7 +55,8 @@ library ERC4337SpecsParser {
     }
 
     /**
-     * @dev Parses and validates the ERC-4337 rules
+     * Parses and validates the ERC-4337 rules
+     *
      * @param accesses The state diffs to validate
      * @param userOpDetails The UserOperationDetails to validate
      */
@@ -93,7 +94,7 @@ library ERC4337SpecsParser {
     }
 
     /**
-     * @dev Validates that no banned opcodes are used
+     * Validates that no banned opcodes are used
      * @notice This function is not implemented yet, it depends on
      * https://github.com/foundry-rs/foundry/issues/6704
      */
@@ -110,7 +111,8 @@ library ERC4337SpecsParser {
     // current call stack depth.
 
     /**
-     * @dev Validates that no banned storage locations are accessed
+     * Validates that no banned storage locations are accessed
+     *
      * @param currentAccess The current state diff to validate
      * @param entities The entities of the userOp
      */
@@ -145,7 +147,8 @@ library ERC4337SpecsParser {
     }
 
     /**
-     * @dev Validates that no disallowed *CALLs are made
+     * Validates that no disallowed *CALLs are made
+     *
      * @param currentAccess The current state diff to validate
      * @param entities The entities of the userOp
      */
@@ -167,8 +170,7 @@ library ERC4337SpecsParser {
             // deployment)
             // Revert otherwise
             if (
-                currentAccess.account.code.length == 0
-                    && uint256(uint160(currentAccess.account)) > 0x09
+                currentAccess.account.code.length == 0 && !isPrecompile(currentAccess.account)
                     && currentAccess.account != entities.account
             ) {
                 revert("[OP-041] Cannot *CALL addresses without code");
@@ -210,7 +212,8 @@ library ERC4337SpecsParser {
     }
 
     /**
-     * @dev Validates that no disallowed EXT* opcodes are used
+     * Validates that no disallowed EXT* opcodes are used
+     *
      * @param currentAccess The current state diff to validate
      * @param entities The entities of the userOp
      */
@@ -230,8 +233,7 @@ library ERC4337SpecsParser {
             // deployment)
             // Revert otherwise
             if (
-                currentAccess.account.code.length == 0
-                    && uint256(uint160(currentAccess.account)) > 0x09
+                currentAccess.account.code.length == 0 && !isPrecompile(currentAccess.account)
                     && currentAccess.account != entities.account
             ) {
                 revert("[OP-041] EXT* opcodes cannot access addresses without code");
@@ -240,7 +242,8 @@ library ERC4337SpecsParser {
     }
 
     /**
-     * @dev Validates that no disallowed CREATE2 opcodes are used
+     * Validates that no disallowed CREATE2 opcodes are used
+     *
      * @param currentAccess The current state diff to validate
      * @param entities The entities of the userOp
      */
@@ -264,10 +267,12 @@ library ERC4337SpecsParser {
     }
 
     /**
-     * @dev Returns whether the current storage slot is associated with an entity
+     * Returns whether the current storage slot is associated with an entity
+     *
      * @param currentSlot The current storage slot
      * @param currentAccessAccount The contract address of the current access
      * @param entities The entities of the UserOperation
+     *
      * @return isAssociated Whether the current storage slot is associated with an entity
      */
     function isAssociatedStorage(
@@ -296,9 +301,11 @@ library ERC4337SpecsParser {
     }
 
     /**
-     * @dev Returns whether the current storage slot matches an entity
+     * Returns whether the current storage slot matches an entity
+     *
      * @param slot The current storage slot
      * @param entities The entities of the UserOperation
+     *
      * @return _ Whether the current storage slot matches an entity
      */
     function slotMatchesEntity(
@@ -321,9 +328,11 @@ library ERC4337SpecsParser {
     }
 
     /**
-     * @dev Returns the parent of the current storage slot
+     * Returns the parent of the current storage slot
+     *
      * @param currentAccessAccount The contract address of the current access
      * @param currentSlot The current storage slot
+     *
      * @return found Whether the parent was found
      * @return key The parent slot
      */
@@ -358,8 +367,10 @@ library ERC4337SpecsParser {
     }
 
     /**
-     * @dev Returns the entities of the UserOperation
+     * Returns the entities of the UserOperation
+     *
      * @param userOpDetails The UserOperationDetails to get the entities of
+     *
      * @return entities The entities of the UserOperation
      */
     function getEntities(UserOperationDetails memory userOpDetails)
@@ -401,9 +412,11 @@ library ERC4337SpecsParser {
     }
 
     /**
-     * @dev Returns whether something is an entity and is staked
+     * Returns whether something is an entity and is staked
+     *
      * @param entities The entities of the UserOperation
      * @param toCheck The address to check
+     *
      * @return addressIsEntityAndStaked Whether the address is an entity and is staked
      */
     function isEntityAndStaked(
@@ -426,8 +439,10 @@ library ERC4337SpecsParser {
     }
 
     /**
-     * @dev Returns whether the entity is staked
+     * Returns whether the entity is staked
+     *
      * @param entity The entity to check
+     *
      * @return isEntityStaked Whether the entity is staked
      */
     function isStaked(
@@ -444,5 +459,16 @@ library ERC4337SpecsParser {
         // Return whether the entity is staked
         isEntityStaked =
             deposit.stake >= MIN_STAKE_VALUE && deposit.unstakeDelaySec >= MIN_UNSTAKE_DELAY;
+    }
+
+    /**
+     * Returns whether the address is a precompile
+     *
+     * @param target The address to check
+     *
+     * @return isPrecompile Whether the address is a precompile
+     */
+    function isPrecompile(address target) internal view returns (bool isPrecompile) {
+        return uint256(uint160(target)) <= 0x09 || uint256(uint160(target)) == 0x100;
     }
 }

@@ -28,9 +28,10 @@ import { ERC4337SpecsParser } from "./SpecsParser.sol";
  */
 library Simulator {
     /**
-     * @dev Simulates a UserOperation and validates the ERC-4337 rules
-     * @dev will revert if the UserOperation is invalid
+     * Simulates a UserOperation and validates the ERC-4337 rules will revert if the UserOperation
+     * is invalid
      * @dev This function is used for v0.7 ERC-4337
+     *
      * @param userOp The PackedUserOperation to simulate
      * @param onEntryPoint The address of the entry point to simulate the UserOperation on
      */
@@ -65,9 +66,10 @@ library Simulator {
     }
 
     /**
-     * @dev Simulates a UserOperation and validates the ERC-4337 rules
-     * @dev will revert if the UserOperation is invalid
+     * Simulates a UserOperation and validates the ERC-4337 rules will revert if the UserOperation
+     * is invalid
      * @dev This function is used for v0.6 ERC-4337
+     *
      * @param userOp The UserOperation to simulate
      * @param onEntryPoint The address of the entry point to simulate the UserOperation on
      */
@@ -105,7 +107,7 @@ library Simulator {
     }
 
     /**
-     * @dev Pre-simulation setup
+     * Pre-simulation setup
      */
     function _preSimulation() internal {
         // Create snapshot to revert to after simulation
@@ -123,7 +125,8 @@ library Simulator {
     }
 
     /**
-     * @dev Post-simulation validation
+     * Post-simulation validation
+     *
      * @param userOpDetails The UserOperationDetails to validate
      */
     function _postSimulation(UserOperationDetails memory userOpDetails) internal {
