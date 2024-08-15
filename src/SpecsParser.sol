@@ -373,7 +373,9 @@ library ERC4337SpecsParser {
      *
      * @return entities The entities of the UserOperation
      */
-    function getEntities(UserOperationDetails memory userOpDetails)
+    function getEntities(
+        UserOperationDetails memory userOpDetails
+    )
         internal
         view
         returns (Entities memory entities)

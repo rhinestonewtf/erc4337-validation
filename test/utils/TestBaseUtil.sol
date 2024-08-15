@@ -24,7 +24,9 @@ contract TestBaseUtil is Test {
         factory = new MockFactory(address(implementation));
     }
 
-    function getAccountAndInitCode(bytes32 salt)
+    function getAccountAndInitCode(
+        bytes32 salt
+    )
         internal
         returns (address account, bytes memory initCode)
     {
