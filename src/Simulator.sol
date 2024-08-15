@@ -28,26 +28,47 @@ import { ERC4337SpecsParser } from "./SpecsParser.sol";
  */
 library Simulator {
     /**
-     * Simulates a UserOperation and validates the ERC-4337 rules will revert if the UserOperation
-     * is invalid
+     * Simulates a UserOperation and validates the ERC-4337 rules
+     * @dev This function will revert if the UserOperation is invalid
+     * @dev If the simulation fails, the rules might not be checked correctly so simulationSuccess
+     * should be handled accordingly
      * @dev This function is used for v0.7 ERC-4337
      *
      * @param userOp The PackedUserOperation to simulate
      * @param onEntryPoint The address of the entry point to simulate the UserOperation on
+     *
+     * @return simulationSuccess True if the simulation was successful, false otherwise
      */
-    function simulateUserOp(PackedUserOperation memory userOp, address onEntryPoint) internal {
+    function simulateUserOp(
+        PackedUserOperation memory userOp,
+        address onEntryPoint
+    )
+        internal
+        returns (bool simulationSuccess)
+    {
         // Pre-simulation setup
         _preSimulation();
 
-        // Simulate the UserOperation
+        // Encode the call data
+        bytes memory epCallData =
+            abi.encodeCall(IEntryPointSimulations.simulateValidation, (userOp));
+
+        // Simulate the UserOperation and exit on revert
+        bytes memory returnData;
+        (simulationSuccess, returnData) = address(onEntryPoint).call(epCallData);
+        if (!simulationSuccess) {
+            return simulationSuccess;
+        }
+
+        // Decode the return data
         IEntryPointSimulations.ValidationResult memory result =
-            IEntryPointSimulations(onEntryPoint).simulateValidation(userOp);
+            abi.decode(returnData, (IEntryPointSimulations.ValidationResult));
 
         // Ensure that the signature was valid
         if (result.returnInfo.accountValidationData != 0) {
             bool sigFailed = (result.returnInfo.accountValidationData & 1) == 1;
             if (sigFailed) {
-                revert("Simulation error: signature failed");
+                simulationSuccess = false;
             }
         }
 
@@ -66,29 +87,39 @@ library Simulator {
     }
 
     /**
-     * Simulates a UserOperation and validates the ERC-4337 rules will revert if the UserOperation
-     * is invalid
+     * Simulates a UserOperation and validates the ERC-4337 rules
+     * @dev this function will revert if the UserOperation is invalid
+     * @dev If the simulation fails, the rules might not be checked correctly so simulationSuccess
+     * should be handled accordingly
      * @dev This function is used for v0.6 ERC-4337
      *
      * @param userOp The UserOperation to simulate
      * @param onEntryPoint The address of the entry point to simulate the UserOperation on
+     *
+     * @return simulationSuccess True if the simulation was successful, false otherwise
      */
-    function simulateUserOp(UserOperation memory userOp, address onEntryPoint) internal {
+    function simulateUserOp(
+        UserOperation memory userOp,
+        address onEntryPoint
+    )
+        internal
+        returns (bool simulationSuccess)
+    {
         // Pre-simulation setup
         _preSimulation();
 
         // Simulate the UserOperation and handle revert
-        try IEntryPointSimulationsV060(onEntryPoint).simulateValidation(userOp) { }
-        catch (bytes memory reason) {
+        try IEntryPointSimulationsV060(onEntryPoint).simulateValidation(userOp) {
+            simulationSuccess = true;
+        } catch (bytes memory reason) {
+            simulationSuccess = false;
+
             uint256 sigFailed;
             // selector (4 bytes) + length(32 bytes) + preOpGas(32 bytes)
             // + prefund (32 bytes) + sigFailed (32 bytes)
             uint256 pos = 4 + 32 + 32 + 32;
             assembly {
                 sigFailed := mload(add(reason, pos))
-            }
-            if (sigFailed == 1) {
-                revert("Simulation error: signature failed");
             }
         }
 
