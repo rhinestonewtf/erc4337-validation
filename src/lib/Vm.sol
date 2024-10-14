@@ -44,3 +44,11 @@ function getMappingKeyAndParentOf(address target, bytes32 slot) returns (bool, b
 function expectRevert() {
     Vm(VM_ADDR).expectRevert();
 }
+
+function startDebugTraceRecording() {
+    Vm(VM_ADDR).startDebugTraceRecording();
+}
+
+function stopAndReturnDebugTraceRecording() returns (VmSafe.DebugStep[] memory steps) {
+    return Vm(VM_ADDR).stopAndReturnDebugTraceRecording();
+}

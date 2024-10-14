@@ -13,9 +13,11 @@ import { VmSafe } from "forge-std/Vm.sol";
 import {
     snapshot,
     startMappingRecording,
+    startDebugTraceRecording,
     startStateDiffRecording,
     stopAndReturnStateDiff,
     stopMappingRecording,
+    stopAndReturnDebugTraceRecording,
     revertTo,
     expectRevert
 } from "./lib/Vm.sol";
@@ -73,7 +75,7 @@ library Simulator {
         }
 
         // Create a UserOperationDetails struct
-        // This is to make it easier to maintain compatibility of the differnt UserOperation
+        // This is to make it easier to maintain compatibility of the different UserOperation
         // versions
         UserOperationDetails memory userOpDetails = UserOperationDetails({
             entryPoint: onEntryPoint,
@@ -124,7 +126,7 @@ library Simulator {
         }
 
         // Create a UserOperationDetails struct
-        // This is to make it easier to maintain compatibility of the differnt UserOperation
+        // This is to make it easier to maintain compatibility of the different UserOperation
         // versions
         UserOperationDetails memory userOpDetails = UserOperationDetails({
             entryPoint: onEntryPoint,
@@ -150,9 +152,10 @@ library Simulator {
             sstore(snapShotSlot, snapShotId)
         }
 
-        // Start recording mapping accesses and state diffs
+        // Start recording mapping accesses, state diffs and debug trace
         startMappingRecording();
         startStateDiffRecording();
+        startDebugTraceRecording();
     }
 
     /**
@@ -163,9 +166,11 @@ library Simulator {
     function _postSimulation(UserOperationDetails memory userOpDetails) internal {
         // Get the state diffs
         VmSafe.AccountAccess[] memory accesses = stopAndReturnStateDiff();
+        // Get the recorded opcodes
+        VmSafe.DebugStep[] memory debugTrace = stopAndReturnDebugTraceRecording();
 
         // Validate the ERC-4337 rules
-        ERC4337SpecsParser.parseValidation(accesses, userOpDetails);
+        ERC4337SpecsParser.parseValidation(accesses, userOpDetails, debugTrace);
 
         // Stop (and remove) recording mapping accesses
         stopMappingRecording();

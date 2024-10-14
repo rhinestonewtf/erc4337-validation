@@ -29,12 +29,12 @@
   },
   "dependencies": {
     "@openzeppelin/contracts": "5.0.1",
-    "solady": "github:vectorized/solady",
     "account-abstraction": "github:kopy-kat/account-abstraction#develop",
     "account-abstraction-v0.6": "github:eth-infinitism/account-abstraction#v0.6.0",
     "ds-test": "github:dapphub/ds-test",
-    "forge-std": "github:foundry-rs/forge-std",
-    "prettier": "^2.8.8"
+    "forge-std": "github:foundry-rs/forge-std#8a225d81aa8e2e013580564588c79abb65eacc9e",
+    "prettier": "^2.8.8",
+    "solady": "github:vectorized/solady"
   },
   "devDependencies": {
     "@changesets/cli": "^2.27.2",
