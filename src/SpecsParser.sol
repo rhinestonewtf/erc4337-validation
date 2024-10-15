@@ -608,7 +608,7 @@ library ERC4337SpecsParser {
     function isForbiddenOpcode(uint8 opcode) private pure returns (bool isForbidden) {
         return opcode == 0x3A // GASPRICE
             || opcode == 0x45 // GASLIMIT
-            || opcode == 0x44 // DIFFICULTY
+            || opcode == 0x44 // DIFFICULTY (PREVRANDAO)
             || opcode == 0x42 // TIMESTAMP
             || opcode == 0x48 // BASEFEE
             || opcode == 0x40 // BLOCKHASH
@@ -619,6 +619,7 @@ library ERC4337SpecsParser {
             || opcode == 0x5A // GAS
             || opcode == 0xF0 // CREATE
             || opcode == 0x41 // COINBASE
+            || opcode == 0xFE // INVALID
             || opcode == 0xFF; // SELFDESTRUCT
     }
 }
