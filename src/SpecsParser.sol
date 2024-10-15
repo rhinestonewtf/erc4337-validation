@@ -113,7 +113,7 @@ library ERC4337SpecsParser {
     function validateBannedOpcodes(VmSafe.DebugStep[] memory debugTrace) internal pure {
         // forbidden opcodes are GASPRICE, GASLIMIT, DIFFICULTY, TIMESTAMP, BASEFEE, BLOCKHASH,
         // NUMBER, SELFBALANCE, BALANCE, ORIGIN, GAS, CREATE, COINBASE, SELFDESTRUCT
-        // Exception: GAS is allowed if followed immediately by5 one of { CALL, DELEGATECALL,
+        // Exception: GAS is allowed if followed immediately by one of { CALL, DELEGATECALL,
         // CALLCODE, STATICCALL }]
 
         // Loop over the debug steps to validate the opcodes
