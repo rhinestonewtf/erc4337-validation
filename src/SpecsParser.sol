@@ -126,10 +126,11 @@ library ERC4337SpecsParser {
                     debugTrace[i].opcode == 0x5A // GAS
                 ) {
                     if (
-                        debugTrace[i + 1].opcode != 0xF1 // CALL
-                            && debugTrace[i + 1].opcode != 0xF4 // DELEGATECALL
-                            && debugTrace[i + 1].opcode != 0xF5 // CALLCODE
-                            && debugTrace[i + 1].opcode != 0xFA // STATICCALL
+                        i + 1 >= debugTrace.length
+                            || debugTrace[i + 1].opcode != 0xF1 // CALL
+                                && debugTrace[i + 1].opcode != 0xF4 // DELEGATECALL
+                                && debugTrace[i + 1].opcode != 0xF2 // CALLCODE
+                                && debugTrace[i + 1].opcode != 0xFA // STATICCALL
                     ) {
                         revert InvalidOpcode(debugTrace[i].contractAddr, 0x5A);
                     }
@@ -157,11 +158,13 @@ library ERC4337SpecsParser {
     )
         private
         pure
-        returns (
-            VmSafe.DebugStep[] memory filteredUserOpSteps,
-            VmSafe.DebugStep[] memory filteredPaymasterUserOpSteps
-        )
+        returns (VmSafe.DebugStep[] memory, VmSafe.DebugStep[] memory)
     {
+        // Init filtered debug steps
+        VmSafe.DebugStep[] memory filteredUserOpSteps = new VmSafe.DebugStep[](debugTrace.length);
+        VmSafe.DebugStep[] memory filteredPaymasterUserOpSteps =
+            new VmSafe.DebugStep[](debugTrace.length);
+
         // Init filtered debug steps lengths
         uint256 filteredUserOpStepsLength;
         uint256 filteredPaymasterUserOpStepsLength;
@@ -215,6 +218,9 @@ library ERC4337SpecsParser {
             mstore(filteredUserOpSteps, filteredUserOpStepsLength)
             mstore(filteredPaymasterUserOpSteps, filteredPaymasterUserOpStepsLength)
         }
+
+        // Return the filtered debug steps
+        return (filteredUserOpSteps, filteredPaymasterUserOpSteps);
     }
 
     /**
