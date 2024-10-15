@@ -7,7 +7,7 @@ import {
     IStakeManager,
     UserOperationDetails
 } from "./lib/ERC4337.sol";
-import { VmSafe, Vm } from "forge-std/Vm.sol";
+import { VmSafe } from "forge-std/Vm.sol";
 import { getLabel, getMappingKeyAndParentOf } from "./lib/Vm.sol";
 
 /**
