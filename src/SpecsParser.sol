@@ -18,6 +18,7 @@ import { getLabel, getMappingKeyAndParentOf } from "./lib/Vm.sol";
  */
 library ERC4337SpecsParser {
     // Minimum stake delay
+
     uint256 constant MIN_UNSTAKE_DELAY = 1 days;
     // Minimum stake value
     uint256 constant MIN_STAKE_VALUE = 0.5 ether;
@@ -78,8 +79,8 @@ library ERC4337SpecsParser {
         ) = filterDebugTrace(debugTrace, entities, userOpDetails.entryPoint);
 
         // Validate banned opcodes for the userOp and paymasterUserOp
-        validateBannedOpcodes(filteredUserOpSteps);
-        validateBannedOpcodes(filteredPaymasterUserOpSteps);
+        validateBannedOpcodes(filteredUserOpSteps, entities);
+        validateBannedOpcodes(filteredPaymasterUserOpSteps, entities);
 
         // Validate there are not out of gas errors for the userOp and paymasterUserOp
         validateOutOfGas(filteredUserOpSteps);
@@ -110,7 +111,13 @@ library ERC4337SpecsParser {
      * Validates that no banned opcodes are used
      * @param debugTrace The debug trace to validate
      */
-    function validateBannedOpcodes(VmSafe.DebugStep[] memory debugTrace) internal pure {
+    function validateBannedOpcodes(
+        VmSafe.DebugStep[] memory debugTrace,
+        Entities memory entities
+    )
+        internal
+        pure
+    {
         // forbidden opcodes are GASPRICE, GASLIMIT, DIFFICULTY, TIMESTAMP, BASEFEE, BLOCKHASH,
         // NUMBER, SELFBALANCE, BALANCE, ORIGIN, GAS, CREATE, COINBASE, SELFDESTRUCT
         // Exception: GAS is allowed if followed immediately by one of { CALL, DELEGATECALL,
@@ -136,6 +143,13 @@ library ERC4337SpecsParser {
                     }
                 } else {
                     revert InvalidOpcode(debugTrace[i].contractAddr, debugTrace[i].opcode);
+                }
+                // [OP-080] BALANCE (0x31) and SELFBALANCE (0x47) are allowed only from a staked
+                // entity, else they are blocked.
+                if (debugTrace[i].opcode == 0x31 || debugTrace[i].opcode == 0x47) {
+                    if (isEntityAndStaked(entities, debugTrace[i].contractAddr)) {
+                        continue;
+                    }
                 }
             }
         }
@@ -256,13 +270,54 @@ library ERC4337SpecsParser {
 
             // Allow storage accesses from the sender or allowed entities
             if (!isEntityAndStaked(entities, currentAccessAccount)) {
+                // Access to associated storage of the account in an external (non-entity) contract
+                // is allowed if either
                 bytes32 currentSlot = currentStorageAccess.slot;
                 bool isAssociated = isAssociatedStorage(currentSlot, currentAccessAccount, entities);
-                if (!isAssociated) {
+                // [STO-021] The account already exists.
+                bool accountAlreadyExists = currentAccess.account.code.length != 0;
+                // [STO-022] There is an initCode and the factory contract is staked.
+                bool isFactoryStaked = entities.isFactoryStaked;
+                if (!(isAssociated && (accountAlreadyExists || isFactoryStaked))) {
                     revert InvalidStorageLocation(
                         currentAccessAccount,
                         getLabel(currentAccessAccount),
                         currentSlot,
+                        currentStorageAccess.previousValue,
+                        currentStorageAccess.newValue,
+                        currentStorageAccess.isWrite
+                    );
+                }
+            }
+            // If the entity (paymaster, factory) is staked, then it is also
+            // allowed:
+            else if (isEntityAndStaked(entities, currentAccessAccount)) {
+                // [STO-010] Access to the “account” storage is always allowed.
+                if (currentStorageAccess.account == entities.account) {
+                    continue;
+                }
+                // [STO-031] Access the entity’s own storage.
+                else if (currentStorageAccess.account == currentAccess.accessor) {
+                    continue;
+                }
+                // [STO-032] Read/Write Access to storage slots that are associated with the entity,
+                // in any non-entity contract.
+                else if (
+                    !isEntity(entities, currentStorageAccess.account)
+                        && isAssociatedStorage(
+                            currentStorageAccess.slot, currentStorageAccess.account, entities
+                        )
+                ) {
+                    continue;
+                }
+                // [STO-033] Read-only access to any storage in non-entity contract.
+                else if (isReadOnlyNonEntityAccess(currentStorageAccess, entities)) {
+                    continue;
+                } else {
+                    revert InvalidStorageLocation(
+                        currentStorageAccess.account,
+                        getLabel(currentStorageAccess.account),
+                        currentStorageAccess.slot,
                         currentStorageAccess.previousValue,
                         currentStorageAccess.newValue,
                         currentStorageAccess.isWrite
@@ -423,7 +478,23 @@ library ERC4337SpecsParser {
                 }
             }
         }
-        // todo: [STO-033] Read-only access to any storage in non-entity contract.
+    }
+
+    /**
+     * Check wether the storage access is read only to any storage in a non-entity contract
+     * @param currentStorageAccess The current storage access
+     * @param entities The entities of the UserOperation
+     */
+    function isReadOnlyNonEntityAccess(
+        VmSafe.StorageAccess memory currentStorageAccess,
+        Entities memory entities
+    )
+        internal
+        pure
+        returns (bool)
+    {
+        // Check if the storage access is read only and it is not to an entity
+        return !currentStorageAccess.isWrite && !isEntity(entities, currentStorageAccess.account);
     }
 
     /**
@@ -561,6 +632,28 @@ library ERC4337SpecsParser {
             addressIsEntityAndStaked = entities.isPaymasterStaked;
         } else if (toCheck == entities.aggregator) {
             addressIsEntityAndStaked = entities.isAggregatorStaked;
+        }
+    }
+
+    /**
+     * Returns wether something is an entity
+     *
+     * @param entities The entities of the UserOperation
+     * @param toCheck The address to check
+     */
+    function isEntity(
+        Entities memory entities,
+        address toCheck
+    )
+        internal
+        pure
+        returns (bool addressIsEntity)
+    {
+        if (
+            toCheck == entities.account || toCheck == entities.factory
+                || toCheck == entities.paymaster || toCheck == entities.aggregator
+        ) {
+            addressIsEntity = true;
         }
     }
 

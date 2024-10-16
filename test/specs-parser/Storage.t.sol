@@ -96,4 +96,8 @@ contract StorageParserTest is TestBaseUtil {
     function testSetDataIntoAccountSlot() public {
         simulateUserOp(address(validator), abi.encodePacked(bytes32(uint256(10))));
     }
+
+    function testReadData() public {
+        simulateUserOp(address(validator), abi.encodePacked(bytes32(uint256(11))));
+    }
 }

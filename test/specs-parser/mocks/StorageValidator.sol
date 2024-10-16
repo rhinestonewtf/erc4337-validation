@@ -54,6 +54,10 @@ contract StorageValidator {
         }
     }
 
+    function readData(address addr) public view returns (uint256) {
+        return singleData[addr];
+    }
+
     function _validateUserOp(bytes calldata signature) internal {
         uint256 mode = uint256(bytes32(signature[0:32]));
         if (mode == 1) {
@@ -76,6 +80,8 @@ contract StorageValidator {
             setNestedDataWithOffset(msg.sender, 9, 129);
         } else if (mode == 10) {
             setDataIntoSlot(msg.sender, 10);
+        } else if (mode == 11) {
+            readData(address(1));
         }
     }
 
