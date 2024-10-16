@@ -252,6 +252,7 @@ library ERC4337SpecsParser {
      * @param entities  The entities of the userOp
      * @param userOpDetails The UserOperationDetails to validate
      */
+    // solhint-disable-next-line code-complexity
     function validateBannedStorageLocations(
         VmSafe.DebugStep[] memory debugTrace,
         Entities memory entities,
