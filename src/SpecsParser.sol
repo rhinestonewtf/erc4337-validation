@@ -136,15 +136,16 @@ library ERC4337SpecsParser {
                     ) {
                         revert InvalidOpcode(debugTrace[i].contractAddr, 0x5A);
                     }
-                } else {
-                    revert InvalidOpcode(debugTrace[i].contractAddr, debugTrace[i].opcode);
                 }
                 // [OP-080] BALANCE (0x31) and SELFBALANCE (0x47) are allowed only from a staked
                 // entity, else they are blocked.
-                if (debugTrace[i].opcode == 0x31 || debugTrace[i].opcode == 0x47) {
-                    if (isEntityAndStaked(entities, debugTrace[i].contractAddr)) {
-                        continue;
-                    }
+                else if (
+                    (debugTrace[i].opcode == 0x31 || debugTrace[i].opcode == 0x47)
+                        && isEntityAndStaked(entities, debugTrace[i].contractAddr)
+                ) {
+                    continue;
+                } else {
+                    revert InvalidOpcode(debugTrace[i].contractAddr, debugTrace[i].opcode);
                 }
             }
         }
