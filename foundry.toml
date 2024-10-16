@@ -1,7 +1,10 @@
 [profile.default]
 src = "src"
 out = "out"
-libs = ["node_modules"]
+libs = ["node_modules", "lib"]
+gas_limit = "18446744073709551615"
+memory_limit = 2147483648
+verbosity = 3
 
 [fmt]
 bracket_spacing = true

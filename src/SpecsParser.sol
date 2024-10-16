@@ -14,7 +14,7 @@ import { getLabel, getMappingKeyAndParentOf } from "./lib/Vm.sol";
  * @title ERC4337SpecsParser
  * @author kopy-kat
  * @dev Parses and validates the ERC-4337 rules
- * @custom:credits Credits to Dror (drortirosh) for the approach and an intial prototype
+ * @custom:credits Credits to Dror (drortirosh) for the approach and an initial prototype
  */
 library ERC4337SpecsParser {
     // Minimum stake delay
@@ -22,7 +22,7 @@ library ERC4337SpecsParser {
     // Minimum stake value
     uint256 constant MIN_STAKE_VALUE = 0.5 ether;
 
-    // Emmitted if an invalid storage location is accessed
+    // Emitted if an invalid storage location is accessed
     error InvalidStorageLocation(
         address contractAddress,
         string contractLabel,
@@ -32,8 +32,8 @@ library ERC4337SpecsParser {
         bool isWrite
     );
 
-    // Emmitted if a banned opcode is used
-    error InvalidOpcode(address contractAddress, string opcode);
+    // Emitted if a banned opcode is used
+    error InvalidOpcode(address contractAddress, uint8 opcode);
 
     /**
      * Entity struct
@@ -59,18 +59,31 @@ library ERC4337SpecsParser {
      *
      * @param accesses The state diffs to validate
      * @param userOpDetails The UserOperationDetails to validate
+     * @param debugTrace A trace of used opcodes, stack and memory to validate
      */
     function parseValidation(
         VmSafe.AccountAccess[] memory accesses,
-        UserOperationDetails memory userOpDetails
+        UserOperationDetails memory userOpDetails,
+        VmSafe.DebugStep[] memory debugTrace
     )
         internal
     {
         // Get entities for the userOp
         Entities memory entities = getEntities(userOpDetails);
 
-        // Validate banned opcodes
-        validateBannedOpcodes();
+        // Filter debug trace to get the debug steps for the userOp and paymasterUserOp
+        (
+            VmSafe.DebugStep[] memory filteredUserOpSteps,
+            VmSafe.DebugStep[] memory filteredPaymasterUserOpSteps
+        ) = filterDebugTrace(debugTrace, entities, userOpDetails.entryPoint);
+
+        // Validate banned opcodes for the userOp and paymasterUserOp
+        validateBannedOpcodes(filteredUserOpSteps);
+        validateBannedOpcodes(filteredPaymasterUserOpSteps);
+
+        // Validate there are not out of gas errors for the userOp and paymasterUserOp
+        validateOutOfGas(filteredUserOpSteps);
+        validateOutOfGas(filteredPaymasterUserOpSteps);
 
         // Loop over the state diffs
         for (uint256 i; i < accesses.length; i++) {
@@ -95,20 +108,133 @@ library ERC4337SpecsParser {
 
     /**
      * Validates that no banned opcodes are used
-     * @notice This function is not implemented yet, it depends on
-     * https://github.com/foundry-rs/foundry/issues/6704
+     * @param debugTrace The debug trace to validate
      */
-    function validateBannedOpcodes() internal pure {
-        // todo
+    function validateBannedOpcodes(VmSafe.DebugStep[] memory debugTrace) internal pure {
         // forbidden opcodes are GASPRICE, GASLIMIT, DIFFICULTY, TIMESTAMP, BASEFEE, BLOCKHASH,
         // NUMBER, SELFBALANCE, BALANCE, ORIGIN, GAS, CREATE, COINBASE, SELFDESTRUCT
         // Exception: GAS is allowed if followed immediately by one of { CALL, DELEGATECALL,
         // CALLCODE, STATICCALL }]
-        // revert InvalidOpcode(currentAccess.account, opcode);
+
+        // Loop over the debug steps to validate the opcodes
+        for (uint256 i; i < debugTrace.length; i++) {
+            // Check if the current opcode is a forbidden opcode
+            if (isForbiddenOpcode(debugTrace[i].opcode)) {
+                // Check if the current opcode is GAS, if so, check if it is followed by a CALL,
+                // DELEGATECALL, CALLCODE or STATICCALL
+                if (
+                    debugTrace[i].opcode == 0x5A // GAS
+                ) {
+                    if (
+                        i + 1 >= debugTrace.length
+                            || debugTrace[i + 1].opcode != 0xF1 // CALL
+                                && debugTrace[i + 1].opcode != 0xF4 // DELEGATECALL
+                                && debugTrace[i + 1].opcode != 0xF2 // CALLCODE
+                                && debugTrace[i + 1].opcode != 0xFA // STATICCALL
+                    ) {
+                        revert InvalidOpcode(debugTrace[i].contractAddr, 0x5A);
+                    }
+                } else {
+                    revert InvalidOpcode(debugTrace[i].contractAddr, debugTrace[i].opcode);
+                }
+            }
+        }
     }
 
-    // todo: [OP-020] Revert on "out of gas" is forbidden as it can "leak" the gas limit or the
-    // current call stack depth.
+    /**
+     * Filter debug trace, we are interested in the following debug traces:
+     * - Entrypoint -> validateUserOp
+     * - Entrypoint - validatePaymasterUserOp
+     * @param debugTrace The debug trace to filter
+     * @param entities The entities of the userOp
+     * @param entryPoint The entryPoint address
+     * @return filteredUserOpSteps The filtered debug steps
+     * @return filteredPaymasterUserOpSteps The filtered debug steps
+     */
+    function filterDebugTrace(
+        VmSafe.DebugStep[] memory debugTrace,
+        Entities memory entities,
+        address entryPoint
+    )
+        private
+        pure
+        returns (VmSafe.DebugStep[] memory, VmSafe.DebugStep[] memory)
+    {
+        // Init filtered debug steps
+        VmSafe.DebugStep[] memory filteredUserOpSteps = new VmSafe.DebugStep[](debugTrace.length);
+        VmSafe.DebugStep[] memory filteredPaymasterUserOpSteps =
+            new VmSafe.DebugStep[](debugTrace.length);
+
+        // Init filtered debug steps lengths
+        uint256 filteredUserOpStepsLength;
+        uint256 filteredPaymasterUserOpStepsLength;
+
+        // Init start depth (first time we enter the entryPoint)
+        uint256 startDepth = 0;
+
+        // Loop over the debug steps to find the start depth
+        for (uint256 i; i < debugTrace.length; i++) {
+            // Check if the current debug step contract address is the entryPoint
+            if (debugTrace[i].contractAddr == entryPoint) {
+                // Set the start depth
+                startDepth = debugTrace[i].depth;
+                break;
+            }
+        }
+
+        // Init currentContractAddr
+        address currentContractAddr;
+
+        // Loop over the debug steps to filter the debug steps
+        for (uint256 i = 0; i < debugTrace.length; i++) {
+            // Ignore calls on base depth where the contract address is the entryPoint
+            if (debugTrace[i].depth == startDepth && debugTrace[i].contractAddr == entryPoint) {
+                // If the current opcode is call or static call, update the currentContractAddr with
+                // the value from the stack
+                if (
+                    debugTrace[i].opcode == 0xF1 // CALL
+                        || debugTrace[i].opcode == 0xFA // STATICCALL
+                ) {
+                    currentContractAddr = address(uint160(uint256(debugTrace[i].stack[1])));
+                }
+                continue;
+            }
+
+            // If the depth is grander than the start depth, we are interested in the debug steps,
+            // add to the filteredUserOpSteps
+            // or filteredPaymasterUserOpSteps based on the currentContractAddr
+            if (debugTrace[i].depth > startDepth) {
+                if (currentContractAddr == entities.account) {
+                    filteredUserOpSteps[filteredUserOpStepsLength++] = debugTrace[i];
+                } else if (currentContractAddr == entities.paymaster) {
+                    filteredPaymasterUserOpSteps[filteredPaymasterUserOpStepsLength++] =
+                        debugTrace[i];
+                }
+            }
+        }
+
+        // Update the filtered debug steps lengths
+        assembly {
+            mstore(filteredUserOpSteps, filteredUserOpStepsLength)
+            mstore(filteredPaymasterUserOpSteps, filteredPaymasterUserOpStepsLength)
+        }
+
+        // Return the filtered debug steps
+        return (filteredUserOpSteps, filteredPaymasterUserOpSteps);
+    }
+
+    /**
+     * Validate that the simulation does not revert with Out of Gas
+     * @param debugTrace The debug trace to validate
+     */
+    function validateOutOfGas(VmSafe.DebugStep[] memory debugTrace) internal pure {
+        // Loop over the debug steps to validate out of gas errors
+        for (uint256 i; i < debugTrace.length; i++) {
+            if (debugTrace[i].isOutOfGas) {
+                revert("[OP-020] Simulation reverts with Out of Gas");
+            }
+        }
+    }
 
     /**
      * Validates that no banned storage locations are accessed
@@ -256,7 +382,7 @@ library ERC4337SpecsParser {
     {
         if (currentAccess.kind == VmSafe.AccountAccessKind.Create) {
             // Check that the initCode is not empty and that only the sender is created
-            // Note: If the initCode is emptpy, the factory address is address(0)
+            // Note: If the initCode is empty, the factory address is address(0)
             // Revert otherwise
             if (entities.factory == address(0) || currentAccess.account != entities.account) {
                 revert(
@@ -373,9 +499,7 @@ library ERC4337SpecsParser {
      *
      * @return entities The entities of the UserOperation
      */
-    function getEntities(
-        UserOperationDetails memory userOpDetails
-    )
+    function getEntities(UserOperationDetails memory userOpDetails)
         internal
         view
         returns (Entities memory entities)
@@ -470,7 +594,32 @@ library ERC4337SpecsParser {
      *
      * @return isPrecompile Whether the address is a precompile
      */
-    function isPrecompile(address target) internal view returns (bool isPrecompile) {
+    function isPrecompile(address target) internal pure returns (bool) {
         return uint256(uint160(target)) <= 0x09 || uint256(uint160(target)) == 0x100;
+    }
+
+    /**
+     * Checks if the opcode is a forbidden opcode
+     *
+     * @param opcode The opcode to check
+     *
+     * @return isForbidden Whether the opcode is forbidden
+     */
+    function isForbiddenOpcode(uint8 opcode) private pure returns (bool isForbidden) {
+        return opcode == 0x3A // GASPRICE
+            || opcode == 0x45 // GASLIMIT
+            || opcode == 0x44 // DIFFICULTY (PREVRANDAO)
+            || opcode == 0x42 // TIMESTAMP
+            || opcode == 0x48 // BASEFEE
+            || opcode == 0x40 // BLOCKHASH
+            || opcode == 0x43 // NUMBER
+            || opcode == 0x47 // SELFBALANCE
+            || opcode == 0x31 // BALANCE
+            || opcode == 0x32 // ORIGIN
+            || opcode == 0x5A // GAS
+            || opcode == 0xF0 // CREATE
+            || opcode == 0x41 // COINBASE
+            || opcode == 0xFE // INVALID
+            || opcode == 0xFF; // SELFDESTRUCT
     }
 }

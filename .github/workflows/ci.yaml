@@ -19,3 +19,6 @@ jobs:
       foundry-fuzz-runs: 5000
       foundry-profile: "test"
       match-path: "test/**/*.sol"
+      foundry-verbosity: 3
+      foundry-gas-limit: "18446744073709551615"
+      foundry-memory-limit: 2147483648
