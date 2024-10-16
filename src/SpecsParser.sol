@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.23;
+pragma solidity ^0.8.26;
 
 import {
     IEntryPoint,
@@ -18,19 +18,13 @@ import { getLabel, getMappingKeyAndParentOf } from "./lib/Vm.sol";
  */
 library ERC4337SpecsParser {
     // Minimum stake delay
-
     uint256 constant MIN_UNSTAKE_DELAY = 1 days;
     // Minimum stake value
     uint256 constant MIN_STAKE_VALUE = 0.5 ether;
 
     // Emitted if an invalid storage location is accessed
     error InvalidStorageLocation(
-        address contractAddress,
-        string contractLabel,
-        bytes32 slot,
-        bytes32 previousValue,
-        bytes32 newValue,
-        bool isWrite
+        address contractAddress, string contractLabel, bytes32 slot, bool isWrite
     );
 
     // Emitted if a banned opcode is used
@@ -86,15 +80,16 @@ library ERC4337SpecsParser {
         validateOutOfGas(filteredUserOpSteps);
         validateOutOfGas(filteredPaymasterUserOpSteps);
 
+        // Validate banned storage locations
+        validateBannedStorageLocations(filteredUserOpSteps, entities, userOpDetails);
+        validateBannedStorageLocations(filteredPaymasterUserOpSteps, entities, userOpDetails);
+
         // Loop over the state diffs
         for (uint256 i; i < accesses.length; i++) {
             VmSafe.AccountAccess memory currentAccess = accesses[i];
 
             // Ignore test files
             if (currentAccess.account != address(this) && currentAccess.accessor != address(this)) {
-                // Validate storage accesses
-                validateBannedStorageLocations(currentAccess, entities);
-
                 // Validate disallowed *CALLs
                 validateDisallowedCalls(currentAccess, entities, userOpDetails.entryPoint);
 
@@ -252,40 +247,57 @@ library ERC4337SpecsParser {
 
     /**
      * Validates that no banned storage locations are accessed
-     *
-     * @param currentAccess The current state diff to validate
-     * @param entities The entities of the userOp
+     * @param debugTrace The debug trace to validate
+     * @param entities  The entities of the userOp
+     * @param userOpDetails The UserOperationDetails to validate
      */
     function validateBannedStorageLocations(
-        VmSafe.AccountAccess memory currentAccess,
-        Entities memory entities
+        VmSafe.DebugStep[] memory debugTrace,
+        Entities memory entities,
+        UserOperationDetails memory userOpDetails
     )
         internal
     {
-        // Loop over the storage accesses
-        for (uint256 j; j < currentAccess.storageAccesses.length; j++) {
-            // Get current storage access and account
-            VmSafe.StorageAccess memory currentStorageAccess = currentAccess.storageAccesses[j];
-            address currentAccessAccount = currentStorageAccess.account;
+        // Loop over the debug steps to validate the storage accesses
+        for (uint256 i; i < debugTrace.length; i++) {
+            // Get the current debug step
+            VmSafe.DebugStep memory currentStep = debugTrace[i];
+            // Skip if the opcode is not SLOAD or SSTORE, TLOAD or TSTORE
+            if (
+                currentStep.opcode != 0x54 // SLOAD
+                    && currentStep.opcode != 0x55 // SSTORE
+                    && currentStep.opcode != 0x5C // TLOAD
+                    && currentStep.opcode != 0x5D // TSTORE
+            ) {
+                continue;
+            }
+            // Init current access account
+            address currentAccessAccount = currentStep.contractAddr;
+            // Init current access slot
+            bytes32 currentSlot = bytes32(uint256(currentStep.stack[0]));
 
-            // Allow storage accesses from the sender or allowed entities
-            if (!isEntityAndStaked(entities, currentAccessAccount)) {
-                // Access to associated storage of the account in an external (non-entity) contract
-                // is allowed if either
-                bytes32 currentSlot = currentStorageAccess.slot;
-                bool isAssociated = isAssociatedStorage(currentSlot, currentAccessAccount, entities);
+            /// Access to associated storage of the account in an external (non-entity) contract
+            // is allowed if either
+            if (!isEntity(entities, currentAccessAccount)) {
                 // [STO-021] The account already exists.
-                bool accountAlreadyExists = currentAccess.account.code.length != 0;
+                bool accountAlreadyExists = entities.account.code.length != 0
+                    || (
+                        currentAccessAccount == userOpDetails.entryPoint
+                            && entities.account != address(0)
+                    );
                 // [STO-022] There is an initCode and the factory contract is staked.
                 bool isFactoryStaked = entities.isFactoryStaked;
-                if (!(isAssociated && (accountAlreadyExists || isFactoryStaked))) {
+                if (
+                    !(
+                        isAssociatedStorage(currentSlot, currentAccessAccount, entities)
+                            && (accountAlreadyExists || isFactoryStaked)
+                    )
+                ) {
                     revert InvalidStorageLocation(
                         currentAccessAccount,
                         getLabel(currentAccessAccount),
                         currentSlot,
-                        currentStorageAccess.previousValue,
-                        currentStorageAccess.newValue,
-                        currentStorageAccess.isWrite
+                        currentStep.opcode == 0x55 || currentStep.opcode == 0x5D
                     );
                 }
             }
@@ -293,34 +305,30 @@ library ERC4337SpecsParser {
             // allowed:
             else if (isEntityAndStaked(entities, currentAccessAccount)) {
                 // [STO-010] Access to the “account” storage is always allowed.
-                if (currentStorageAccess.account == entities.account) {
+                if (currentAccessAccount == entities.account) {
                     continue;
                 }
                 // [STO-031] Access the entity’s own storage.
-                else if (currentStorageAccess.account == currentAccess.accessor) {
+                else if (currentAccessAccount == userOpDetails.sender) {
                     continue;
                 }
                 // [STO-032] Read/Write Access to storage slots that are associated with the entity,
                 // in any non-entity contract.
                 else if (
-                    !isEntity(entities, currentStorageAccess.account)
-                        && isAssociatedStorage(
-                            currentStorageAccess.slot, currentStorageAccess.account, entities
-                        )
+                    !isEntity(entities, currentAccessAccount)
+                        && isAssociatedStorage(currentSlot, currentAccessAccount, entities)
                 ) {
                     continue;
                 }
                 // [STO-033] Read-only access to any storage in non-entity contract.
-                else if (isReadOnlyNonEntityAccess(currentStorageAccess, entities)) {
+                else if (currentStep.opcode == 0x54 || currentStep.opcode == 0x5C) {
                     continue;
                 } else {
                     revert InvalidStorageLocation(
-                        currentStorageAccess.account,
-                        getLabel(currentStorageAccess.account),
-                        currentStorageAccess.slot,
-                        currentStorageAccess.previousValue,
-                        currentStorageAccess.newValue,
-                        currentStorageAccess.isWrite
+                        currentAccessAccount,
+                        getLabel(currentAccessAccount),
+                        currentSlot,
+                        currentStep.opcode == 0x55 || currentStep.opcode == 0x5D
                     );
                 }
             }

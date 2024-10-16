@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.23;
+pragma solidity ^0.8.26;
 
 import { PackedUserOperation, UserOperation } from "src/lib/ERC4337.sol";
 import { IValidator } from "./IValidator.sol";

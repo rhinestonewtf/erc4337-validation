@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.23;
+pragma solidity ^0.8.26;
 
 import { PackedUserOperation, UserOperation } from "src/lib/ERC4337.sol";
 import { IValidator } from "test/utils/IValidator.sol";
@@ -58,6 +58,24 @@ contract StorageValidator {
         return singleData[addr];
     }
 
+    function tsetDataIntoSlot(address addr, uint256 value) public {
+        assembly {
+            tstore(addr, value)
+        }
+    }
+
+    function tsetData(uint256 value) public {
+        assembly {
+            tstore(0, value)
+        }
+    }
+
+    function treadData(address addr) public view returns (uint256 value) {
+        assembly {
+            value := tload(addr)
+        }
+    }
+
     function _validateUserOp(bytes calldata signature) internal {
         uint256 mode = uint256(bytes32(signature[0:32]));
         if (mode == 1) {
@@ -82,6 +100,12 @@ contract StorageValidator {
             setDataIntoSlot(msg.sender, 10);
         } else if (mode == 11) {
             readData(address(1));
+        } else if (mode == 12) {
+            tsetDataIntoSlot(msg.sender, 12);
+        } else if (mode == 13) {
+            tsetData(13);
+        } else if (mode == 14) {
+            treadData(address(1));
         }
     }
 

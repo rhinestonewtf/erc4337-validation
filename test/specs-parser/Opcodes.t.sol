@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.23;
+pragma solidity ^0.8.26;
 
 import { TestBaseUtil } from "test/utils/TestBaseUtil.sol";
 import { ERC4337SpecsParser } from "src/SpecsParser.sol";

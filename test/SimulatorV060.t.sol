@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.23;
+pragma solidity ^0.8.26;
 
 import { TestBaseUtil, UserOperation } from "test/utils/TestBaseUtilV060.sol";
 import { MockValidator } from "test/utils/MockValidator.sol";
