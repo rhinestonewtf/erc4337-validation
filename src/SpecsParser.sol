@@ -24,7 +24,7 @@ library ERC4337SpecsParser {
 
     // Emitted if an invalid storage location is accessed
     error InvalidStorageLocation(
-        address contractAddress, string contractLabel, bytes32 slot, bool isWrite
+        address contractAddress, string contractLabel, bytes32 slot, bytes32 newValue, bool isWrite
     );
 
     // Emitted if a banned opcode is used
@@ -340,6 +340,7 @@ library ERC4337SpecsParser {
                 currentAccessAccount,
                 getLabel(currentAccessAccount),
                 currentSlot,
+                bytes32(currentStep.stack[1]), // newValue
                 currentStep.opcode == 0x55 || currentStep.opcode == 0x5D
             );
         }
