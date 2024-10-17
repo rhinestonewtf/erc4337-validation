@@ -278,6 +278,11 @@ library ERC4337SpecsParser {
             // Init current access slot
             bytes32 currentSlot = bytes32(uint256(currentStep.stack[0]));
 
+            // [STO-010] Access to the “account” storage is always allowed.
+            if (currentAccessAccount == entities.account) {
+                continue;
+            }
+
             /// Access to associated storage of the account in an external (non-entity) contract
             // is allowed if either
             if (!isEntity(entities, currentAccessAccount)) {
@@ -291,8 +296,9 @@ library ERC4337SpecsParser {
                 bool isFactoryStaked = entities.isFactoryStaked;
                 if (
                     !(
-                        isAssociatedStorage(currentSlot, currentAccessAccount, entities)
-                            && (accountAlreadyExists || isFactoryStaked)
+                        isAssociatedStorageWithSpecificEntity(
+                            currentSlot, currentAccessAccount, entities.account
+                        ) && (accountAlreadyExists || isFactoryStaked)
                     )
                 ) {
                     revert InvalidStorageLocation(
@@ -305,25 +311,37 @@ library ERC4337SpecsParser {
             }
             // If the entity (paymaster, factory) is staked, then it is also
             // allowed:
-            else if (isEntityAndStaked(entities, currentAccessAccount)) {
-                // [STO-010] Access to the “account” storage is always allowed.
-                if (currentAccessAccount == entities.account) {
-                    continue;
-                }
+            else if (entities.isFactoryStaked || entities.isPaymasterStaked) {
+                // Init notEntity
+                bool notEntity = !isEntity(entities, currentAccessAccount);
                 // [STO-031] Access the entity’s own storage.
-                else if (currentAccessAccount == userOpDetails.sender) {
+                if (
+                    (currentAccessAccount == entities.factory && entities.isFactoryStaked)
+                        || (currentAccessAccount == entities.paymaster && entities.isPaymasterStaked)
+                ) {
                     continue;
                 }
                 // [STO-032] Read/Write Access to storage slots that are associated with the entity,
                 // in any non-entity contract.
                 else if (
-                    !isEntity(entities, currentAccessAccount)
-                        && isAssociatedStorage(currentSlot, currentAccessAccount, entities)
+                    notEntity
+                        && (
+                            (
+                                isAssociatedStorageWithSpecificEntity(
+                                    currentSlot, currentAccessAccount, entities.factory
+                                ) && entities.isFactoryStaked
+                            )
+                                || (
+                                    isAssociatedStorageWithSpecificEntity(
+                                        currentSlot, currentAccessAccount, entities.paymaster
+                                    ) && entities.isPaymasterStaked
+                                )
+                        )
                 ) {
                     continue;
                 }
                 // [STO-033] Read-only access to any storage in non-entity contract.
-                else if (currentStep.opcode == 0x54 || currentStep.opcode == 0x5C) {
+                else if (notEntity && currentStep.opcode == 0x54 || currentStep.opcode == 0x5C) {
                     continue;
                 } else {
                     revert InvalidStorageLocation(
@@ -491,6 +509,39 @@ library ERC4337SpecsParser {
     }
 
     /**
+     * Returns whether the current storage slot matches a specific entity
+     *
+     * @param currentSlot The current storage slot
+     * @param currentAccessAccount The contract address of the current access
+     * @param entity The entity to check
+     *
+     * @return isAssociated Whether the current storage slot matches a specific entity
+     */
+    function isAssociatedStorageWithSpecificEntity(
+        bytes32 currentSlot,
+        address currentAccessAccount,
+        address entity
+    )
+        internal
+        returns (bool isAssociated)
+    {
+        // Check if the current slot is associated with a specific entity
+        if (slotMatchesEntity(currentSlot, entity)) {
+            isAssociated = true;
+        } else {
+            // Get the parent of the current slot if it is a mapping
+            (bool found, bytes32 key) = getMappingParent(currentAccessAccount, currentSlot);
+
+            // If the parent was found, check if it is associated with an entity
+            if (found) {
+                if (slotMatchesEntity(key, entity)) {
+                    isAssociated = true;
+                }
+            }
+        }
+    }
+
+    /**
      * Check wether the storage access is read only to any storage in a non-entity contract
      * @param currentStorageAccess The current storage access
      * @param entities The entities of the UserOperation
@@ -532,6 +583,24 @@ library ERC4337SpecsParser {
         return slot == bytes32(uint256(uint160(entities.account)))
             || (slot == bytes32(uint256(uint160(entities.factory))) && entities.isFactoryStaked)
             || (slot == bytes32(uint256(uint160(entities.paymaster))) && entities.isPaymasterStaked);
+    }
+
+    /**
+     * Returns whether the current storage slot matches an entity
+     *
+     * @param slot The current storage slot
+     * @param entity The entity to check
+     *
+     * @return _ Whether the current storage slot matches an entity
+     */
+    function slotMatchesEntity(bytes32 slot, address entity) internal pure returns (bool) {
+        // Make sure that the slot is not empty and thus matches with an unset entity
+        if (slot == bytes32(0)) {
+            return false;
+        }
+
+        // Check if the slot matches an entity
+        return slot == bytes32(uint256(uint160(entity)));
     }
 
     /**
