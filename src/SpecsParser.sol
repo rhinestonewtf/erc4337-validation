@@ -341,7 +341,7 @@ library ERC4337SpecsParser {
                     continue;
                 }
                 // [STO-033] Read-only access to any storage in non-entity contract.
-                else if (notEntity && currentStep.opcode == 0x54 || currentStep.opcode == 0x5C) {
+                else if (notEntity && (currentStep.opcode == 0x54 || currentStep.opcode == 0x5C)) {
                     continue;
                 } else {
                     revert InvalidStorageLocation(
