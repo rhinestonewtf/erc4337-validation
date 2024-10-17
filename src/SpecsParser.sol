@@ -273,10 +273,13 @@ library ERC4337SpecsParser {
             ) {
                 continue;
             }
+
             // Init current access account
             address currentAccessAccount = currentStep.contractAddr;
             // Init current access slot
             bytes32 currentSlot = bytes32(uint256(currentStep.stack[0]));
+            // Init notEntity
+            bool notEntity = !isEntity(entities, currentAccessAccount);
 
             // [STO-010] Access to the “account” storage is always allowed.
             if (currentAccessAccount == entities.account) {
@@ -285,35 +288,22 @@ library ERC4337SpecsParser {
 
             /// Access to associated storage of the account in an external (non-entity) contract
             // is allowed if either
-            if (!isEntity(entities, currentAccessAccount)) {
-                // [STO-021] The account already exists.
-                bool accountAlreadyExists = entities.account.code.length != 0
-                    || (
-                        currentAccessAccount == userOpDetails.entryPoint
-                            && entities.account != address(0)
-                    );
-                // [STO-022] There is an initCode and the factory contract is staked.
-                bool isFactoryStaked = entities.isFactoryStaked;
-                if (
-                    !(
-                        isAssociatedStorageWithSpecificEntity(
-                            currentSlot, currentAccessAccount, entities.account
-                        ) && (accountAlreadyExists || isFactoryStaked)
-                    )
-                ) {
-                    revert InvalidStorageLocation(
-                        currentAccessAccount,
-                        getLabel(currentAccessAccount),
-                        currentSlot,
-                        currentStep.opcode == 0x55 || currentStep.opcode == 0x5D
-                    );
-                }
+            // [STO-021] The account already exists.
+            bool accountAlreadyExists = entities.account.code.length != 0
+                || (currentAccessAccount == userOpDetails.entryPoint && entities.account != address(0));
+            // [STO-022] There is an initCode and the factory contract is staked.
+            bool isFactoryStaked = entities.isFactoryStaked;
+            if (
+                notEntity
+                    && isAssociatedStorage(currentSlot, currentAccessAccount, entities.account)
+                    && (accountAlreadyExists || isFactoryStaked)
+            ) {
+                continue;
             }
+
             // If the entity (paymaster, factory) is staked, then it is also
             // allowed:
-            else if (entities.isFactoryStaked || entities.isPaymasterStaked) {
-                // Init notEntity
-                bool notEntity = !isEntity(entities, currentAccessAccount);
+            if (entities.isFactoryStaked || entities.isPaymasterStaked) {
                 // [STO-031] Access the entity’s own storage.
                 if (
                     (currentAccessAccount == entities.factory && entities.isFactoryStaked)
@@ -327,12 +317,11 @@ library ERC4337SpecsParser {
                     notEntity
                         && (
                             (
-                                isAssociatedStorageWithSpecificEntity(
-                                    currentSlot, currentAccessAccount, entities.factory
-                                ) && entities.isFactoryStaked
+                                isAssociatedStorage(currentSlot, currentAccessAccount, entities.factory)
+                                    && entities.isFactoryStaked
                             )
                                 || (
-                                    isAssociatedStorageWithSpecificEntity(
+                                    isAssociatedStorage(
                                         currentSlot, currentAccessAccount, entities.paymaster
                                     ) && entities.isPaymasterStaked
                                 )
@@ -343,15 +332,16 @@ library ERC4337SpecsParser {
                 // [STO-033] Read-only access to any storage in non-entity contract.
                 else if (notEntity && (currentStep.opcode == 0x54 || currentStep.opcode == 0x5C)) {
                     continue;
-                } else {
-                    revert InvalidStorageLocation(
-                        currentAccessAccount,
-                        getLabel(currentAccessAccount),
-                        currentSlot,
-                        currentStep.opcode == 0x55 || currentStep.opcode == 0x5D
-                    );
                 }
             }
+
+            // Otherwise, revert
+            revert InvalidStorageLocation(
+                currentAccessAccount,
+                getLabel(currentAccessAccount),
+                currentSlot,
+                currentStep.opcode == 0x55 || currentStep.opcode == 0x5D
+            );
         }
     }
 
@@ -517,7 +507,7 @@ library ERC4337SpecsParser {
      *
      * @return isAssociated Whether the current storage slot matches a specific entity
      */
-    function isAssociatedStorageWithSpecificEntity(
+    function isAssociatedStorage(
         bytes32 currentSlot,
         address currentAccessAccount,
         address entity
