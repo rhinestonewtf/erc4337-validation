@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.23;
+pragma solidity ^0.8.26;
 
 import { TestBaseUtil } from "test/utils/TestBaseUtil.sol";
 import { StorageValidator } from "test/specs-parser/mocks/StorageValidator.sol";
@@ -95,5 +95,29 @@ contract StorageParserTest is TestBaseUtil {
 
     function testSetDataIntoAccountSlot() public {
         simulateUserOp(address(validator), abi.encodePacked(bytes32(uint256(10))));
+    }
+
+    function testReadData() public {
+        simulateUserOp(address(validator), abi.encodePacked(bytes32(uint256(11))));
+    }
+
+    function testTransientSetDataIntoSlot() public {
+        simulateUserOp(address(validator), abi.encodePacked(bytes32(uint256(12))));
+    }
+
+    function transientStorage__RevertWhen__InvalidSlot() public {
+        simulateUserOp(address(validator), abi.encodePacked(bytes32(uint256(13))));
+    }
+
+    function testTransientStorage__RevertWhen__InvalidSlot() public {
+        vm.expectRevert(ERC4337SpecsParser.InvalidStorageLocation.selector);
+        (bool success,) = address(this).call(
+            abi.encodeWithSelector(this.transientStorage__RevertWhen__InvalidSlot.selector)
+        );
+        assertFalse(success);
+    }
+
+    function testTransientReadDataFromSlot() public {
+        simulateUserOp(address(validator), abi.encodePacked(bytes32(uint256(14))));
     }
 }
