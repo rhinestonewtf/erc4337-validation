@@ -13,12 +13,12 @@ function getLabel(address addr) view returns (string memory) {
     return Vm(VM_ADDR).getLabel(addr);
 }
 
-function snapshot() returns (uint256) {
-    return Vm(VM_ADDR).snapshot();
+function snapshotState() returns (uint256) {
+    return Vm(VM_ADDR).snapshotState();
 }
 
-function revertTo(uint256 id) returns (bool) {
-    return Vm(VM_ADDR).revertTo(id);
+function revertToState(uint256 id) returns (bool) {
+    return Vm(VM_ADDR).revertToState(id);
 }
 
 function startStateDiffRecording() {

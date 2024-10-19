@@ -11,14 +11,14 @@ import {
 } from "./lib/ERC4337.sol";
 import { VmSafe } from "forge-std/Vm.sol";
 import {
-    snapshot,
+    snapshotState,
     startMappingRecording,
     startDebugTraceRecording,
     startStateDiffRecording,
     stopAndReturnStateDiff,
     stopMappingRecording,
     stopAndReturnDebugTraceRecording,
-    revertTo,
+    revertToState,
     expectRevert
 } from "./lib/Vm.sol";
 import { ERC4337SpecsParser } from "./SpecsParser.sol";
@@ -144,7 +144,7 @@ library Simulator {
      */
     function _preSimulation() internal {
         // Create snapshot to revert to after simulation
-        uint256 snapShotId = snapshot();
+        uint256 snapShotId = snapshotState();
 
         // Store the snapshot id so that it can be reverted to after simulation
         bytes32 snapShotSlot = keccak256(abi.encodePacked("Simulator.SnapshotId"));
@@ -183,6 +183,6 @@ library Simulator {
         }
 
         // Revert to snapshot
-        revertTo(snapShotId);
+        revertToState(snapShotId);
     }
 }

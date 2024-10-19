@@ -1,10 +1,10 @@
 # ERC4337 Validation
 
-**A library to validate the [ERC-4337 rules](https://github.com/eth-infinitism/account-abstraction/blob/develop/erc/ERCS/erc-7562.md) within Foundry**
+**A library to validate the [ERC-4337 rules](https://eips.ethereum.org/EIPS/eip-7562) within Foundry**
 
 This library allows you to validate:
 
-- [ ] Banned opcodes
+- [x] Banned opcodes
 - [x] Banned storage locations
 - [x] Disallowed `*CALLs`
 - [x] Disallowed use of `EXT*` opcodes
