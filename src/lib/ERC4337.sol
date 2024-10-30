@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.26;
+pragma solidity ^0.8.0;
 
 // ERC-4337 v0.7 imports
 import { PackedUserOperation } from "account-abstraction/interfaces/PackedUserOperation.sol";
