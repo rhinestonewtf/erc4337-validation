@@ -52,12 +52,10 @@ library ERC4337SpecsParser {
     /**
      * Parses and validates the ERC-4337 rules
      *
-     * @param accesses The state diffs to validate
      * @param userOpDetails The UserOperationDetails to validate
      * @param debugTrace A trace of used opcodes, stack and memory to validate
      */
     function parseValidation(
-        VmSafe.AccountAccess[] memory accesses,
         UserOperationDetails memory userOpDetails,
         VmSafe.DebugStep[] memory debugTrace
     )
@@ -84,22 +82,17 @@ library ERC4337SpecsParser {
         validateBannedStorageLocations(filteredUserOpSteps, entities, userOpDetails);
         validateBannedStorageLocations(filteredPaymasterUserOpSteps, entities, userOpDetails);
 
-        // Loop over the state diffs
-        for (uint256 i; i < accesses.length; i++) {
-            VmSafe.AccountAccess memory currentAccess = accesses[i];
+        // Validate calls using filtered steps
+        validateCalls(filteredUserOpSteps, entities, userOpDetails.entryPoint);
+        validateCalls(filteredPaymasterUserOpSteps, entities, userOpDetails.entryPoint);
 
-            // Ignore test files
-            if (currentAccess.account != address(this) && currentAccess.accessor != address(this)) {
-                // Validate disallowed *CALLs
-                validateDisallowedCalls(currentAccess, entities, userOpDetails.entryPoint);
+        // Validate ext opcodes using filtered steps
+        validateExtOpcodes(filteredUserOpSteps, entities);
+        validateExtOpcodes(filteredPaymasterUserOpSteps, entities);
 
-                // Validate disallowed EXT* opcodes
-                validateDisallowedExtOpCodes(currentAccess, entities);
-
-                // Validate disallowed CREATEs
-                validateDisallowedCreate(currentAccess, entities);
-            }
-        }
+        // Validate create using filtered steps
+        validateCreate(filteredUserOpSteps, entities, userOpDetails);
+        validateCreate(filteredPaymasterUserOpSteps, entities, userOpDetails);
     }
 
     /**
@@ -347,61 +340,65 @@ library ERC4337SpecsParser {
     }
 
     /**
-     * Validates that no disallowed *CALLs are made
-     *
-     * @param currentAccess The current state diff to validate
+     * Validates *CALL operations in the trace (CALL, DELEGATECALL, CALLCODE, STATICCALL)
+     * @param debugSteps The filtered debug steps to validate
      * @param entities The entities of the userOp
+     * @param entryPoint The EntryPoint contract address
      */
-    function validateDisallowedCalls(
-        VmSafe.AccountAccess memory currentAccess,
+    function validateCalls(
+        VmSafe.DebugStep[] memory debugSteps,
         Entities memory entities,
         address entryPoint
     )
         internal
         view
     {
-        if (
-            currentAccess.kind == VmSafe.AccountAccessKind.Call
-                || currentAccess.kind == VmSafe.AccountAccessKind.DelegateCall
-                || currentAccess.kind == VmSafe.AccountAccessKind.CallCode
-                || currentAccess.kind == VmSafe.AccountAccessKind.StaticCall
-        ) {
-            // Check that the account has code, is a standard precompile or is the sender (before
-            // deployment)
-            // Revert otherwise
+        for (uint256 i = 0; i < debugSteps.length; i++) {
+            uint8 op = debugSteps[i].opcode;
             if (
-                currentAccess.account.code.length == 0 && !isPrecompile(currentAccess.account)
-                    && currentAccess.account != entities.account
+                op != 0xF1 /*CALL*/ && op != 0xF2 /*CALLCODE*/ && op != 0xF4 /*DELEGATECALL*/
+                    && op != 0xFA /*STATICCALL*/
+            ) {
+                continue;
+            }
+
+            address targetAddr = address(uint160(uint256(debugSteps[i].stack[1])));
+            uint256 value = op == 0xF1 || op == 0xF2 ? uint256(debugSteps[i].stack[2]) : 0;
+            bytes memory callData = debugSteps[i].memoryInput;
+
+            // [OP-041] Cannot *CALL addresses without code (except precompiles or account)
+            if (
+                targetAddr.code.length == 0 && !isPrecompile(targetAddr)
+                    && targetAddr != entities.account
             ) {
                 revert("[OP-041] Cannot *CALL addresses without code");
             }
 
-            bool callerIsAccount = currentAccess.accessor == entities.account;
-            bool callerIsFactory = currentAccess.accessor == entities.factory;
-            bool calleeIsEntryPoint = currentAccess.account == entryPoint;
+            bool callerIsAccount = debugSteps[i].contractAddr == entities.account;
+            bool callerIsFactory = debugSteps[i].contractAddr == entities.factory;
+            bool calleeIsEntryPoint = targetAddr == entryPoint;
 
-            // Check that value is only used from account or factory to EntryPoint
-            // Revert otherwise
-            if (currentAccess.value > 0) {
+            // [OP-061] Value transfers only allowed from account/factory to EntryPoint
+            if (value > 0) {
                 if (!((callerIsAccount || callerIsFactory) && calleeIsEntryPoint)) {
                     revert("[OP-061] Cannot use value except from account or factory to EntryPoint");
                 }
             }
 
-            // Allow self calls from EntryPoint
-            if (calleeIsEntryPoint && currentAccess.accessor != entryPoint) {
-                // Allow only depositTo from factory/account or fallback from account
-                // Revert otherwise
+            // [OP-052] EntryPoint calls limited to depositTo or fallback
+            if (calleeIsEntryPoint) {
+                bytes4 selector;
+                if (callData.length >= 4) {
+                    selector =
+                        bytes4(abi.encodePacked(callData[0], callData[1], callData[2], callData[3]));
+                }
+
                 if (
-                    (
-                        !(
-                            (
-                                (callerIsAccount || callerIsFactory)
-                                    && currentAccess.data.length >= 4
-                                    && bytes4(currentAccess.data) == bytes4(0xb760faf9)
-                            ) || (callerIsAccount && currentAccess.data.length == 0)
-                        )
-                    )
+                    // depositTo
+                    !(
+                        ((callerIsAccount || callerIsFactory) && selector == bytes4(0xb760faf9))
+                            || (callerIsAccount && callData.length == 0)
+                    ) // fallback
                 ) {
                     revert(
                         "[OP-052] Cannot call EntryPoint except depositTo from factory or account"
@@ -412,29 +409,30 @@ library ERC4337SpecsParser {
     }
 
     /**
-     * Validates that no disallowed EXT* opcodes are used
-     *
-     * @param currentAccess The current state diff to validate
+     * Validates EXT* operations in the trace (EXTCODESIZE, EXTCODEHASH, EXTCODECOPY)
+     * @param debugSteps The filtered debug steps to validate
      * @param entities The entities of the userOp
      */
-    function validateDisallowedExtOpCodes(
-        VmSafe.AccountAccess memory currentAccess,
+    function validateExtOpcodes(
+        VmSafe.DebugStep[] memory debugSteps,
         Entities memory entities
     )
         internal
         view
     {
-        if (
-            currentAccess.kind == VmSafe.AccountAccessKind.Extcodesize
-                || currentAccess.kind == VmSafe.AccountAccessKind.Extcodehash
-                || currentAccess.kind == VmSafe.AccountAccessKind.Extcodecopy
-        ) {
-            // Check that the account has code, is a standard precompile or is the sender (before
-            // deployment)
-            // Revert otherwise
+        for (uint256 i = 0; i < debugSteps.length; i++) {
+            uint8 op = debugSteps[i].opcode;
+            if (op != 0x3B && op != 0x3C && op != 0x3F) {
+                // EXTCODEHASH, EXTCODESIZE, EXTCODECOPY
+                continue;
+            }
+
+            address targetAddr = address(uint160(uint256(debugSteps[i].stack[0])));
+
+            // [OP-041] Cannot access addresses without code (except precompiles or account)
             if (
-                currentAccess.account.code.length == 0 && !isPrecompile(currentAccess.account)
-                    && currentAccess.account != entities.account
+                targetAddr.code.length == 0 && !isPrecompile(targetAddr)
+                    && targetAddr != entities.account
             ) {
                 revert("[OP-041] EXT* opcodes cannot access addresses without code");
             }
@@ -442,26 +440,40 @@ library ERC4337SpecsParser {
     }
 
     /**
-     * Validates that no disallowed CREATE2 opcodes are used
-     *
-     * @param currentAccess The current state diff to validate
+     * Validates CREATE operations in the trace
+     * @param debugSteps The filtered debug steps to validate
      * @param entities The entities of the userOp
+     * @param userOpDetails The UserOperationDetails containing initCode
      */
-    function validateDisallowedCreate(
-        VmSafe.AccountAccess memory currentAccess,
-        Entities memory entities
+    function validateCreate(
+        VmSafe.DebugStep[] memory debugSteps,
+        Entities memory entities,
+        UserOperationDetails memory userOpDetails
     )
         internal
         pure
     {
-        if (currentAccess.kind == VmSafe.AccountAccessKind.Create) {
-            // Check that the initCode is not empty and that only the sender is created
-            // Note: If the initCode is empty, the factory address is address(0)
-            // Revert otherwise
-            if (entities.factory == address(0) || currentAccess.account != entities.account) {
-                revert(
-                    "[OP-031] CREATE2 is allowed exactly once in the deployment phase and must deploy code for the sender address"
-                );
+        uint256 createCount = 0;
+        for (uint256 i = 0; i < debugSteps.length; i++) {
+            if (debugSteps[i].opcode == 0xF5) {
+                // CREATE2
+                createCount++;
+
+                // [OP-031] CREATE2 only allowed during deployment
+                if (userOpDetails.initCode.length == 0) {
+                    revert("[OP-031] CREATE2 not allowed without initCode");
+                }
+
+                // Only one CREATE2 allowed
+                if (createCount > 1) {
+                    revert("[OP-031] Multiple CREATE2 operations not allowed");
+                }
+
+                // Must deploy the account contract
+                address createdAddr = address(uint160(uint256(debugSteps[i].stack[0])));
+                if (createdAddr != entities.account) {
+                    revert("[OP-031] CREATE2 must deploy the account contract");
+                }
             }
         }
     }

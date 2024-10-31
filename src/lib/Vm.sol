@@ -21,14 +21,6 @@ function revertToState(uint256 id) returns (bool) {
     return Vm(VM_ADDR).revertToState(id);
 }
 
-function startStateDiffRecording() {
-    Vm(VM_ADDR).startStateDiffRecording();
-}
-
-function stopAndReturnStateDiff() returns (VmSafe.AccountAccess[] memory) {
-    return Vm(VM_ADDR).stopAndReturnStateDiff();
-}
-
 function startMappingRecording() {
     Vm(VM_ADDR).startMappingRecording();
 }
