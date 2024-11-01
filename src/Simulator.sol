@@ -14,8 +14,6 @@ import {
     snapshotState,
     startMappingRecording,
     startDebugTraceRecording,
-    startStateDiffRecording,
-    stopAndReturnStateDiff,
     stopMappingRecording,
     stopAndReturnDebugTraceRecording,
     revertToState,
@@ -152,9 +150,8 @@ library Simulator {
             sstore(snapShotSlot, snapShotId)
         }
 
-        // Start recording mapping accesses, state diffs and debug trace
+        // Start recording mapping accesses and debug trace
         startMappingRecording();
-        startStateDiffRecording();
         startDebugTraceRecording();
     }
 
@@ -164,13 +161,11 @@ library Simulator {
      * @param userOpDetails The UserOperationDetails to validate
      */
     function _postSimulation(UserOperationDetails memory userOpDetails) internal {
-        // Get the state diffs
-        VmSafe.AccountAccess[] memory accesses = stopAndReturnStateDiff();
         // Get the recorded opcodes
         VmSafe.DebugStep[] memory debugTrace = stopAndReturnDebugTraceRecording();
 
         // Validate the ERC-4337 rules
-        ERC4337SpecsParser.parseValidation(accesses, userOpDetails, debugTrace);
+        ERC4337SpecsParser.parseValidation(userOpDetails, debugTrace);
 
         // Stop (and remove) recording mapping accesses
         stopMappingRecording();
