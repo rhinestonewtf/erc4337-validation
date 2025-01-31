@@ -6,6 +6,7 @@ gas_limit = "18446744073709551615"
 memory_limit = 2147483648
 verbosity = 3
 evm_version = "cancun"
+optimizer = true
 
 [fmt]
 bracket_spacing = true
