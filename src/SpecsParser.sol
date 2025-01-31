@@ -328,13 +328,17 @@ library ERC4337SpecsParser {
                 }
             }
 
+            // If the opcode is SSTORE or TSTORE
+            bool isWrite = currentStep.opcode == 0x55 || currentStep.opcode == 0x5D;
+
             // Otherwise, revert
             revert InvalidStorageLocation(
                 currentAccessAccount,
                 getLabel(currentAccessAccount),
                 currentSlot,
-                bytes32(currentStep.stack[1]), // newValue
-                currentStep.opcode == 0x55 || currentStep.opcode == 0x5D
+                isWrite ? bytes32(uint256(currentStep.stack[1])) : bytes32(0), // there is no
+                    // newValue for SLOAD and TLOAD
+                isWrite
             );
         }
     }
