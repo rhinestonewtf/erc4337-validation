@@ -44,3 +44,11 @@ function startDebugTraceRecording() {
 function stopAndReturnDebugTraceRecording() returns (VmSafe.DebugStep[] memory steps) {
     return Vm(VM_ADDR).stopAndReturnDebugTraceRecording();
 }
+
+function pauseGasMetering() {
+    Vm(VM_ADDR).pauseGasMetering();
+}
+
+function resumeGasMetering() {
+    Vm(VM_ADDR).resumeGasMetering();
+}

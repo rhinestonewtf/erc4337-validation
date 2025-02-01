@@ -17,7 +17,9 @@ import {
     stopMappingRecording,
     stopAndReturnDebugTraceRecording,
     revertToState,
-    expectRevert
+    expectRevert,
+    pauseGasMetering,
+    resumeGasMetering
 } from "./lib/Vm.sol";
 import { ERC4337SpecsParser } from "./SpecsParser.sol";
 
@@ -152,6 +154,8 @@ library Simulator {
 
         // Start recording mapping accesses and debug trace
         startMappingRecording();
+        // Pause gas metering to avoid OOG issues as debug trace recording consumes many gas
+        pauseGasMetering();
         startDebugTraceRecording();
     }
 
@@ -163,9 +167,15 @@ library Simulator {
     function _postSimulation(UserOperationDetails memory userOpDetails) internal {
         // Get the recorded opcodes
         VmSafe.DebugStep[] memory debugTrace = stopAndReturnDebugTraceRecording();
+        // Resume gas metering after debug trace recording is completed
+        resumeGasMetering();
 
         // Validate the ERC-4337 rules
+        // Pause gas metering to avoid OOG issues as `parseValidation` consumes many gas
+        pauseGasMetering();
         ERC4337SpecsParser.parseValidation(userOpDetails, debugTrace);
+        // Resume gas metering after `parseValidation` is completed
+        resumeGasMetering();
 
         // Stop (and remove) recording mapping accesses
         stopMappingRecording();
